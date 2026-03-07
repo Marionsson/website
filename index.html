@@ -1805,21 +1805,89 @@ function initPizza(){
 
   function drawBrushLayer(pts, baseColor, bake, isCheeseLayer){
     if(pts.length===0) return;
-    const offset = isCheeseLayer ? {dx:pizzaX-PCX, dy:pizzaY-PCY} : {dx:pizzaX-PCX, dy:pizzaY-PCY};
-    pts.forEach(p => {
-      const baked = isCheeseLayer
-        ? `hsl(${44-bake*22},${88}%,${54-bake*24}%)`
-        : `hsl(${5+bake*6},${72+bake*8}%,${38-bake*12}%)`;
-      const col = bake > 0.1 ? baked : baseColor;
-      ctx.beginPath();
-      ctx.arc(p.x + offset.dx, p.y + offset.dy, p.r * (1 + bake*0.15), 0, Math.PI*2);
-      ctx.fillStyle = col;
-      ctx.fill();
-      // sheen
-      ctx.beginPath();
-      ctx.arc(p.x+offset.dx-p.r*0.2, p.y+offset.dy-p.r*0.2, p.r*0.35, 0, Math.PI*2);
-      ctx.fillStyle = `rgba(255,255,255,${isCheeseLayer?0.22:0.1})`;
-      ctx.fill();
+    const odx = pizzaX-PCX, ody = pizzaY-PCY;
+    if(!isCheeseLayer){
+      // sauce — plain blobs as before
+      pts.forEach(p => {
+        const col = bake > 0.1
+          ? `hsl(${5+bake*6},${72+bake*8}%,${38-bake*12}%)`
+          : baseColor;
+        ctx.beginPath();
+        ctx.arc(p.x+odx, p.y+ody, p.r*(1+bake*0.15), 0, Math.PI*2);
+        ctx.fillStyle=col; ctx.fill();
+      });
+      return;
+    }
+    // ── Cheese: shredded strands ──
+    // Each stored point seeds a small cluster of irregular shreds
+    pts.forEach((p, pi) => {
+      const cx2=p.x+odx, cy2=p.y+ody;
+      // deterministic pseudo-random from point index so shreds are stable across frames
+      const seed = pi * 9301 + 49297;
+      const rng = (n) => (((seed * (n+1) * 1664525 + 1013904223) & 0x7fffffff) / 0x7fffffff);
+
+      const baseHue  = 44 - bake*22;
+      const baseSat  = 88;
+      const baseLit  = 54 - bake*24;
+      const meltCol  = `hsl(${baseHue},${baseSat}%,${baseLit}%)`;
+      const freshCol = `hsl(48,92%,72%)`; // bright pale yellow for fresh shreds
+
+      // number of strands per point — varies slightly
+      const nStrands = 4 + Math.floor(rng(0)*4);
+      for(let s=0; s<nStrands; s++){
+        const angle  = rng(s*3)   * Math.PI * 2;
+        const spread = rng(s*3+1) * p.r * 0.85;
+        const sx     = cx2 + Math.cos(angle)*spread;
+        const sy     = cy2 + Math.sin(angle)*spread;
+        // strand dimensions: long thin ellipse
+        const len    = p.r*(0.55 + rng(s*3+2)*0.7);
+        const thick  = p.r*(0.10 + rng(s*5)*0.12);
+        const rot    = rng(s*7)   * Math.PI;
+        // colour variation — slightly lighter/darker per strand
+        const litVar = baseLit + (rng(s*11)-0.5)*14;
+        const col    = bake > 0.05
+          ? `hsl(${baseHue+(rng(s*13)-0.5)*6},${baseSat}%,${litVar}%)`
+          : `hsl(${48+(rng(s*13)-0.5)*8},${90}%,${68+(rng(s*11)-0.5)*10}%)`;
+
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.rotate(rot);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, len, thick, 0, 0, Math.PI*2);
+        ctx.fillStyle = col;
+        ctx.fill();
+        // tiny sheen on each strand
+        ctx.beginPath();
+        ctx.ellipse(-len*0.2, -thick*0.2, len*0.22, thick*0.4, 0, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(255,255,255,${0.12+rng(s*17)*0.14})`;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // a few stray wispy edges around the blob
+      const nWisps = 2 + Math.floor(rng(20)*3);
+      for(let w=0; w<nWisps; w++){
+        const wa  = rng(w*31+5) * Math.PI*2;
+        const wd  = p.r*(0.6 + rng(w*31+6)*0.65);
+        const wx  = cx2 + Math.cos(wa)*wd;
+        const wy  = cy2 + Math.sin(wa)*wd;
+        const wl  = p.r*(0.25 + rng(w*31+7)*0.35);
+        const wt  = p.r*(0.05 + rng(w*31+8)*0.07);
+        const wr  = rng(w*31+9) * Math.PI;
+        const litV= baseLit + (rng(w*31+10)-0.5)*18;
+        ctx.save();
+        ctx.translate(wx, wy);
+        ctx.rotate(wr);
+        ctx.globalAlpha = 0.55 + rng(w*31+11)*0.3;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, wl, wt, 0, 0, Math.PI*2);
+        ctx.fillStyle = bake > 0.05
+          ? `hsl(${baseHue},${baseSat-10}%,${litV}%)`
+          : `hsl(50,85%,${74+(rng(w*31+12)-0.5)*12}%)`;
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
     });
   }
 
