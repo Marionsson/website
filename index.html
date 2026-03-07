@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stress Ball</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;800;900&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: #f0ebe3;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+    font-family: 'Nunito', sans-serif;
+    cursor: none;
+    user-select: none;
+  }
+  canvas { display:block; }
+  #ui {
+    position: fixed;
+    top: 24px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 28px;
+    align-items: center;
+    pointer-events: none;
+  }
+  .stat {
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    padding: 8px 20px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #555;
+    letter-spacing: 0.5px;
+    border: 1.5px solid rgba(0,0,0,0.06);
+  }
+  .stat span { color: #e05a3a; font-size: 1.1rem; }
+  #mood {
+    position: fixed;
+    bottom: 28px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 1rem; font-weight: 900;
+    color: rgba(0,0,0,0.18);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    pointer-events: none;
+    transition: color 0.4s;
+  }
+</style>
+</head>
+<body>
+<div id="ui">
+  <div class="stat">squeezes <span id="sqCount">0</span></div>
+  <div class="stat">throws <span id="throwCount">0</span></div>
+  <div class="stat">bounces <span id="bounceCount">0</span></div>
+</div>
+<canvas id="c"></canvas>
+<div id="mood">grab me</div>
+
+<script>
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+let W, H;
+
+function resize(){
+  W = cv.width  = window.innerWidth;
+  H = cv.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Ball state ──
+const ball = {
+  x: 0, y: 0,       // set after resize
+  vx: 0, vy: 0,
+  r: 72,             // rest radius
+  // deformation: we store a squish matrix (scaleX, scaleY, rotation)
+  sx: 1, sy: 1,      // current scale (sx*sy ≈ 1 for volume conservation)
+  rot: 0,            // rotation of squish axis
+  // colour — cycles on bounce
+  hue: 14,
+  // physics
+  mass: 1,
+  restitution: 0.72,
+  friction: 0.985,
+};
+
+// Position after first resize
+function initBall(){
+  ball.x = W/2;
+  ball.y = H/2;
+}
+initBall();
+
+// ── Interaction state ──
+let dragging = false;
+let dragOffX=0, dragOffY=0;
+let mouseX=W/2, mouseY=H/2;
+let prevMouseX=W/2, prevMouseY=H/2;
+let prevT = performance.now();
+let grabT = 0;
+let squeezePower = 0;   // 0..1 while held
+let isThrowing = false;
+let throwVX=0, throwVY=0;
+
+// Stats
+let sqCount=0, throwCount=0, bounceCount=0;
+const sqEl=document.getElementById('sqCount');
+const thEl=document.getElementById('throwCount');
+const bnEl=document.getElementById('bounceCount');
+const moodEl=document.getElementById('mood');
+
+const MOODS = [
+  [0,   'grab me'],
+  [3,   'oooh that\'s nice'],
+  [8,   'getting squeezed 😬'],
+  [15,  'okay okay okay'],
+  [25,  'please stop 😭'],
+  [40,  'you monster'],
+  [60,  'i am begging you'],
+  [100, '...i feel nothing'],
+];
+function updateMood(){
+  let msg = MOODS[0][1];
+  for(const [n,m] of MOODS){ if(sqCount>=n) msg=m; }
+  moodEl.textContent = msg;
+}
+
+// Colour palette — soft, tactile
+const PALETTES = [
+  { hue:14,  name:'tangerine' },
+  { hue:340, name:'bubblegum' },
+  { hue:200, name:'sky' },
+  { hue:145, name:'mint' },
+  { hue:55,  name:'butter' },
+  { hue:275, name:'lavender' },
+];
+let paletteIdx=0;
+
+// ── Shadow history for motion blur feel ──
+const trail = [];
+
+// ── Jiggle / wobble ──
+let wobble = 0;   // extra deformation energy, decays
+let wobbleAngle = 0;
+
+// ── Canvas cursor ──
+let cursorPressing = false;
+
+// ── DRAW ──
+function drawBall(){
+  const { x, y, r, sx, sy, rot, hue } = ball;
+  const totalWobble = wobble;
+  const wsx = sx + Math.cos(wobbleAngle)*totalWobble;
+  const wsy = sy - Math.cos(wobbleAngle)*totalWobble*0.5;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.scale(wsx, wsy);
+
+  // Shadow
+  ctx.save();
+  ctx.scale(1, 0.28);
+  ctx.translate(0, r*3.5);
+  const sdw = ctx.createRadialGradient(0,0,0,0,0,r*wsx);
+  sdw.addColorStop(0,'rgba(0,0,0,0.22)');
+  sdw.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.beginPath(); ctx.ellipse(0,0,r*wsx*1.1,r*0.9,0,0,Math.PI*2);
+  ctx.fillStyle=sdw; ctx.fill();
+  ctx.restore();
+
+  // Main ball body
+  const grad = ctx.createRadialGradient(-r*0.28, -r*0.32, r*0.05, 0, 0, r*1.05);
+  grad.addColorStop(0,   `hsl(${hue},100%,80%)`);
+  grad.addColorStop(0.45,`hsl(${hue},90%,62%)`);
+  grad.addColorStop(0.8, `hsl(${hue},82%,48%)`);
+  grad.addColorStop(1,   `hsl(${hue},78%,36%)`);
+
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI*2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Specular highlight
+  const spec = ctx.createRadialGradient(-r*0.3, -r*0.35, 0, -r*0.25, -r*0.28, r*0.42);
+  spec.addColorStop(0,'rgba(255,255,255,0.72)');
+  spec.addColorStop(0.5,'rgba(255,255,255,0.18)');
+  spec.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2);
+  ctx.fillStyle=spec; ctx.fill();
+
+  // Second smaller highlight
+  ctx.beginPath(); ctx.arc(-r*0.18, -r*0.22, r*0.14, 0, Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.fill();
+
+  // Subtle rim darkening
+  const rim = ctx.createRadialGradient(0,0,r*0.7,0,0,r);
+  rim.addColorStop(0,'rgba(0,0,0,0)');
+  rim.addColorStop(1,'rgba(0,0,0,0.18)');
+  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2);
+  ctx.fillStyle=rim; ctx.fill();
+
+  // Texture dots when squeezed
+  if(squeezePower > 0.1 || wobble > 0.05){
+    const n = 6;
+    const intensity = Math.min(squeezePower + wobble, 1);
+    ctx.globalAlpha = intensity * 0.12;
+    for(let i=0;i<n;i++){
+      const a = (i/n)*Math.PI*2;
+      const dr = r*0.55;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a)*dr, Math.sin(a)*dr, r*0.07, 0, Math.PI*2);
+      ctx.fillStyle=`hsl(${hue},60%,30%)`;
+      ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+
+  ctx.restore();
+}
+
+function drawCursor(){
+  const pressing = cursorPressing;
+  ctx.save();
+  ctx.translate(mouseX, mouseY);
+  // Ring
+  ctx.beginPath(); ctx.arc(0,0, pressing?10:13, 0, Math.PI*2);
+  ctx.strokeStyle = pressing ? `hsl(${ball.hue},80%,45%)` : 'rgba(0,0,0,0.3)';
+  ctx.lineWidth = pressing?3:1.5; ctx.stroke();
+  // Centre dot
+  ctx.beginPath(); ctx.arc(0,0,2.5,0,Math.PI*2);
+  ctx.fillStyle = pressing ? `hsl(${ball.hue},80%,45%)` : 'rgba(0,0,0,0.4)';
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawBackground(){
+  // Soft textured background
+  ctx.fillStyle = '#f0ebe3';
+  ctx.fillRect(0,0,W,H);
+
+  // Subtle grid
+  ctx.strokeStyle = 'rgba(0,0,0,0.04)';
+  ctx.lineWidth = 1;
+  const step=40;
+  for(let x=0;x<W;x+=step){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
+  for(let y=0;y<H;y+=step){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
+}
+
+// ── PHYSICS ──
+const GRAVITY = 980;
+const FLOOR_BOUNCE_THRESHOLD = 60; // px/s
+
+function physics(dt){
+  if(dragging) return;
+
+  ball.vy += GRAVITY * dt;
+  ball.x  += ball.vx * dt;
+  ball.y  += ball.vy * dt;
+  ball.vx *= ball.friction;
+
+  const floorY = H - ball.r * ball.sy - 18;
+  const ceilY  = ball.r * ball.sy;
+  const wallL  = ball.r * ball.sx;
+  const wallR  = W - ball.r * ball.sx;
+
+  // Floor
+  if(ball.y >= floorY){
+    const speed = Math.abs(ball.vy);
+    ball.y = floorY;
+    if(speed > FLOOR_BOUNCE_THRESHOLD){
+      ball.vy = -ball.vy * ball.restitution;
+      const impact = Math.min(speed/1200, 0.5);
+      triggerBounce(impact, Math.PI/2);
+      bounceCount++;
+      bnEl.textContent=bounceCount;
+      // colour shift on hard bounce
+      if(speed > 400){ nextColour(); }
+    } else {
+      ball.vy = 0;
+      ball.vx *= 0.88;
+    }
+  }
+  // Ceiling
+  if(ball.y <= ceilY){
+    ball.y = ceilY;
+    ball.vy = Math.abs(ball.vy)*ball.restitution;
+    triggerBounce(0.2, Math.PI/2);
+  }
+  // Walls
+  if(ball.x <= wallL){
+    ball.x = wallL;
+    ball.vx = Math.abs(ball.vx)*ball.restitution;
+    triggerBounce(0.2, 0);
+  }
+  if(ball.x >= wallR){
+    ball.x = wallR;
+    ball.vx = -Math.abs(ball.vx)*ball.restitution;
+    triggerBounce(0.2, 0);
+  }
+}
+
+function triggerBounce(power, angle){
+  wobble = Math.min(wobble + power*0.9, 0.55);
+  wobbleAngle = angle;
+  ball.sx = 1 + power*0.6;
+  ball.sy = 1 - power*0.35;
+  ball.rot = angle;
+}
+
+function nextColour(){
+  paletteIdx = (paletteIdx+1) % PALETTES.length;
+  ball.hue = PALETTES[paletteIdx].hue;
+}
+
+// ── SQUISH while held ──
+function updateSquish(dt){
+  if(dragging){
+    squeezePower = Math.min(squeezePower + dt*1.4, 1);
+    const s = squeezePower;
+    // squish toward cursor direction from centre
+    const dx = mouseX - ball.x, dy = mouseY - ball.y;
+    const ang = Math.atan2(dy,dx);
+    ball.rot = ang;
+    ball.sx = 1 + s*0.32;
+    ball.sy = 1 - s*0.22;
+  } else {
+    squeezePower = Math.max(0, squeezePower - dt*4);
+    // spring back
+    ball.sx += (1 - ball.sx)*dt*14;
+    ball.sy += (1 - ball.sy)*dt*14;
+    ball.rot *= 0.88;
+  }
+  // wobble decay
+  wobble *= 0.92;
+  if(wobble < 0.001) wobble = 0;
+}
+
+// ── MAIN LOOP ──
+let lastT = performance.now();
+function loop(ts){
+  const dt = Math.min((ts-lastT)/1000, 0.05);
+  lastT = ts;
+
+  physics(dt);
+  updateSquish(dt);
+
+  drawBackground();
+  drawBall();
+  drawCursor();
+
+  requestAnimationFrame(loop);
+}
+
+// ── INPUT ──
+function ptInBall(px, py){
+  const dx=px-ball.x, dy=py-ball.y;
+  return Math.sqrt(dx*dx+dy*dy) < ball.r*1.1;
+}
+
+function onDown(px,py){
+  if(ptInBall(px,py)){
+    dragging=true; cursorPressing=true;
+    dragOffX=ball.x-px; dragOffY=ball.y-py;
+    grabT=performance.now();
+    ball.vx=0; ball.vy=0;
+    sqCount++; sqEl.textContent=sqCount;
+    updateMood();
+  }
+}
+
+function onMove(px,py,ts){
+  prevMouseX=mouseX; prevMouseY=mouseY;
+  mouseX=px; mouseY=py;
+  if(dragging){
+    ball.x=px+dragOffX;
+    ball.y=py+dragOffY;
+  }
+}
+
+function onUp(px,py,ts){
+  if(dragging){
+    // compute throw velocity from recent mouse delta
+    const dt=Math.max((ts-(prevT||ts))/1000,0.008);
+    const vx=(px-prevMouseX)/dt;
+    const vy=(py-prevMouseY)/dt;
+    const speed=Math.sqrt(vx*vx+vy*vy);
+    ball.vx=vx*0.85;
+    ball.vy=vy*0.85;
+    if(speed>200){ throwCount++; thEl.textContent=throwCount; }
+    triggerBounce(Math.min(squeezePower,0.4), Math.atan2(vy,vx));
+    dragging=false; cursorPressing=false;
+  }
+  prevT=ts;
+}
+
+// Mouse
+cv.addEventListener('mousedown', e=>{ onDown(e.clientX,e.clientY); });
+window.addEventListener('mousemove', e=>{ prevT=performance.now(); onMove(e.clientX,e.clientY,performance.now()); });
+window.addEventListener('mouseup',   e=>onUp(e.clientX,e.clientY,performance.now()));
+
+// Touch
+cv.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  const t=e.touches[0];
+  onDown(t.clientX,t.clientY);
+},{passive:false});
+window.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  const t=e.touches[0];
+  onMove(t.clientX,t.clientY,performance.now());
+},{passive:false});
+window.addEventListener('touchend', e=>{
+  const t=e.changedTouches[0];
+  onUp(t.clientX,t.clientY,performance.now());
+});
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
