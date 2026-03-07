@@ -879,6 +879,7 @@ function launchGame(id){
 
 function goBack(){
   activeGame = null;  // immediately stops all game loops and sound guards
+  if(window._ktAC){ try{ window._ktAC.close(); }catch(e){} window._ktAC=null; }
   gameScreen.classList.remove('visible');
   lobby.style.display='flex';
   setTimeout(()=>lobby.classList.remove('hiding'), 10);
@@ -1019,6 +1020,146 @@ function initStressBall(){
 ══════════════════════════════════════════════════════════ */
 function initKetchup(){
   const cv    = document.getElementById('kt-canvas');
+
+  // ── Frog Audio ──
+  let ktAC=null;
+  function getKtAC(){
+    if(!ktAC || ktAC.state==='closed'){ ktAC=new(window.AudioContext||window.webkitAudioContext)(); window._ktAC=ktAC; }
+    return ktAC;
+  }
+
+  // Tongue shoot — quick elastic twang: fast sine chirp down
+  function soundShoot(){
+    if(activeGame!=='ketchup') return;
+    try{
+      const ac=getKtAC(); if(ac.state==='suspended') ac.resume();
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.type='sine';
+      o.frequency.setValueAtTime(520, ac.currentTime);
+      o.frequency.exponentialRampToValueAtTime(180, ac.currentTime+0.12);
+      g.gain.setValueAtTime(0.08, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+0.14);
+      o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime+0.15);
+    }catch(e){}
+  }
+
+  // Tongue hit — wet sticky splat: short noise burst, low-passed
+  function soundHit(){
+    if(activeGame!=='ketchup') return;
+    try{
+      const ac=getKtAC();
+      const sr=ac.sampleRate, dur=0.07;
+      const buf=ac.createBuffer(1,Math.ceil(sr*dur),sr);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,1.8);
+      const s=ac.createBufferSource(); s.buffer=buf;
+      const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=400;
+      const g=ac.createGain(); g.gain.value=0.14;
+      s.connect(lp); lp.connect(g); g.connect(ac.destination); s.start();
+    }catch(e){}
+  }
+
+  // Regular fly catch — small satisfying pop
+  function soundCatch(){
+    if(activeGame!=='ketchup') return;
+    try{
+      const ac=getKtAC();
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.type='sine';
+      o.frequency.setValueAtTime(340+Math.random()*80, ac.currentTime);
+      o.frequency.exponentialRampToValueAtTime(160, ac.currentTime+0.09);
+      g.gain.setValueAtTime(0.09, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+0.11);
+      o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime+0.12);
+    }catch(e){}
+  }
+
+  // Firefly catch — soft electric blip: quick sine blip, slightly higher
+  function soundFirefly(){
+    if(activeGame!=='ketchup') return;
+    try{
+      const ac=getKtAC();
+      [0, 0.06].forEach((delay,i)=>{
+        const o=ac.createOscillator(), g=ac.createGain();
+        o.type='sine'; o.frequency.value=i===0?660:880;
+        const t=ac.currentTime+delay;
+        g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.001, t+0.09);
+        o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+0.1);
+      });
+    }catch(e){}
+  }
+
+  // Golden moth — soft shimmering shimmer: rising arpeggio of gentle sines
+  function soundMoth(){
+    if(activeGame!=='ketchup') return;
+    try{
+      const ac=getKtAC();
+      [523,659,784,988].forEach((f,i)=>{
+        const o=ac.createOscillator(), g=ac.createGain();
+        o.type='sine'; o.frequency.value=f;
+        const t=ac.currentTime+i*0.08;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.07, t+0.05);
+        g.gain.exponentialRampToValueAtTime(0.001, t+0.55);
+        o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+0.6);
+      });
+    }catch(e){}
+  }
+
+  // Milestone combo — quick ascending two-tone chime
+  function soundCombo(){
+    if(activeGame!=='ketchup') return;
+    try{
+      const ac=getKtAC();
+      [440,660,880].forEach((f,i)=>{
+        const o=ac.createOscillator(), g=ac.createGain();
+        o.type='sine'; o.frequency.value=f;
+        const t=ac.currentTime+i*0.07;
+        g.gain.setValueAtTime(0.07, t); g.gain.exponentialRampToValueAtTime(0.001, t+0.35);
+        o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+0.4);
+      });
+    }catch(e){}
+  }
+
+  // Phase transition — gentle ambient swell per phase
+  // dusk: low warm drone fade in; night: soft cricket chirp; dawn: two bright high notes
+  function soundPhase(phase){
+    if(activeGame!=='ketchup') return;
+    try{
+      const ac=getKtAC();
+      if(phase===1){
+        // dusk: warm low hum fading in then out
+        const o=ac.createOscillator(), g=ac.createGain();
+        o.type='sine'; o.frequency.value=110;
+        g.gain.setValueAtTime(0, ac.currentTime);
+        g.gain.linearRampToValueAtTime(0.06, ac.currentTime+0.8);
+        g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+2.5);
+        o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime+2.6);
+      } else if(phase===2){
+        // night: two short high cricket-like chirps
+        [0, 0.25].forEach(delay=>{
+          const o=ac.createOscillator(), g=ac.createGain();
+          o.type='square'; o.frequency.value=1800+Math.random()*200;
+          const t=ac.currentTime+delay;
+          g.gain.setValueAtTime(0.03, t); g.gain.exponentialRampToValueAtTime(0.001, t+0.12);
+          o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+0.13);
+        });
+      } else if(phase===3){
+        // dawn: two gentle high rising notes like bird calls
+        [[880,1047],[660,784]].forEach(([f1,f2],i)=>{
+          const o=ac.createOscillator(), g=ac.createGain();
+          o.type='sine';
+          o.frequency.setValueAtTime(f1, ac.currentTime+i*0.3);
+          o.frequency.linearRampToValueAtTime(f2, ac.currentTime+i*0.3+0.18);
+          g.gain.setValueAtTime(0.06, ac.currentTime+i*0.3);
+          g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+i*0.3+0.5);
+          o.connect(g); g.connect(ac.destination);
+          o.start(ac.currentTime+i*0.3); o.stop(ac.currentTime+i*0.3+0.55);
+        });
+      }
+    }catch(e){}
+  }
+
   const cx    = cv.getContext('2d');
   const hint  = document.getElementById('kt-hint');
   const scoreEl = document.getElementById('kt-score');
@@ -1164,6 +1305,7 @@ function initKetchup(){
     tongue={active:true,x:fx,y:fy,tx:fx+dx/dist*maxLen,ty:fy+dy/dist*maxLen,
             dx:dx/dist,dy:dy/dist,len:0,maxLen,extending:true,
             hit:false,hitFlyIdx:-1,retractFly:null};
+    soundShoot();
     addRipple(fx,fy);
   }
   cv.addEventListener('click',e=>{ if(activeGame==='ketchup') shootTongue(); });
@@ -1506,6 +1648,7 @@ function initKetchup(){
       phaseT=Math.min(phaseT+dt*0.4,1);
       if(phaseT>=1){ currentPhase=targetPhase; phaseT=0;
         phaseLabel=PHASE_LABELS[currentPhase]; phaseLabelLife=2.5;
+        soundPhase(currentPhase);
         // adapt fly pool to new phase
         for(let i=0;i<flies.length;i++) if(flies[i].alive) spawnFly(i);
       }
@@ -1550,6 +1693,7 @@ function initKetchup(){
             if(Math.hypot(tipX-f.x,tipY-f.y)<f.size*2.2){
               tongue.hit=true; tongue.hitFlyIdx=i; tongue.retractFly=f;
               f.alive=false; f.catchAnim=1;
+              soundHit();
             }
           });
         }
@@ -1567,7 +1711,11 @@ function initKetchup(){
             score+=pts;
             combo++; comboTimer=2.5; comboFlash=1;
             const isMilestone=combo===3||combo===5||combo===10||combo%10===0;
+            if(pts>=5) soundMoth();
+            else if(pts===2) soundFirefly();
+            else soundCatch();
             if(isMilestone){
+              soundCombo();
               const labels={3:'TRIPLE! 🔥',5:'ON FIRE! 🔥🔥',10:'UNSTOPPABLE! 🌟'};
               addPop(W*0.5,H*0.38,labels[combo]||`×${combo} COMBO!! 🌟`,true);
               flies.forEach(f=>{if(f.alive){const a=Math.random()*Math.PI*2;f.vx+=Math.cos(a)*320;f.vy+=Math.sin(a)*260;}});
