@@ -3,421 +3,1273 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stress Ball</title>
+<title>Marionsson's Stress Relief Corner</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;800;900&display=swap');
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    background: #f0ebe3;
-    width: 100vw; height: 100vh;
-    overflow: hidden;
-    font-family: 'Nunito', sans-serif;
-    cursor: none;
-    user-select: none;
-  }
-  canvas { display:block; }
-  #ui {
-    position: fixed;
-    top: 24px; left: 50%;
-    transform: translateX(-50%);
-    display: flex; gap: 28px;
-    align-items: center;
-    pointer-events: none;
-  }
-  .stat {
-    background: rgba(255,255,255,0.7);
-    backdrop-filter: blur(8px);
-    border-radius: 20px;
-    padding: 8px 20px;
-    font-size: 0.82rem;
-    font-weight: 800;
-    color: #555;
-    letter-spacing: 0.5px;
-    border: 1.5px solid rgba(0,0,0,0.06);
-  }
-  .stat span { color: #e05a3a; font-size: 1.1rem; }
-  #mood {
-    position: fixed;
-    bottom: 28px; left: 50%;
-    transform: translateX(-50%);
-    font-size: 1rem; font-weight: 900;
-    color: rgba(0,0,0,0.18);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    pointer-events: none;
-    transition: color 0.4s;
-  }
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
+
+:root {
+  --cream:   #f5efe6;
+  --warm:    #ede4d8;
+  --brown:   #7a5c44;
+  --rust:    #c4593a;
+  --sage:    #7a9e7e;
+  --peach:   #e8956d;
+  --text:    #3d2e22;
+  --muted:   #a08878;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--cream);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── LOBBY ── */
+#lobby {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 24px 80px;
+  transition: opacity 0.35s, transform 0.35s;
+}
+#lobby.hiding { opacity:0; transform:scale(0.97); pointer-events:none; }
+
+.lobby-header {
+  text-align: center;
+  margin-bottom: 64px;
+}
+.lobby-header .eyebrow {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.lobby-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text);
+}
+.lobby-header h1 em {
+  font-style: italic;
+  color: var(--rust);
+}
+.lobby-header p {
+  margin-top: 16px;
+  font-size: 1rem;
+  color: var(--muted);
+  font-weight: 600;
+  max-width: 360px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+
+/* Decorative divider */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 auto 52px;
+  width: 220px;
+}
+.divider::before, .divider::after {
+  content:''; flex:1; height:1px; background: var(--brown); opacity:0.2;
+}
+.divider span { font-size:1rem; opacity:0.4; }
+
+/* Game cards */
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  justify-content: center;
+  max-width: 960px;
+}
+
+.card {
+  background: white;
+  border-radius: 24px;
+  width: 280px;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(80,40,20,0.08), 0 0 0 1.5px rgba(80,40,20,0.06);
+  transition: transform 0.22s cubic-bezier(.34,1.56,.64,1), box-shadow 0.22s;
+  position: relative;
+}
+.card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 16px 40px rgba(80,40,20,0.14), 0 0 0 1.5px rgba(80,40,20,0.08);
+}
+.card:active { transform: scale(0.97); }
+
+.card-preview {
+  height: 170px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  position: relative;
+  overflow: hidden;
+}
+.card-preview.ball-bg   { background: linear-gradient(135deg, #fde8d8 0%, #f5c4a8 100%); }
+.card-preview.ketchup-bg{ background: linear-gradient(135deg, #fde0d8 0%, #f5a898 100%); }
+.card-preview.bubble-bg { background: linear-gradient(135deg, #d8eef5 0%, #a8d4e8 100%); }
+.card-preview.snow-bg   { background: linear-gradient(135deg, #e8f0f8 0%, #c8d8ee 100%); }
+
+/* little preview illustrations */
+.card-preview .preview-emoji {
+  font-size: 5rem;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.12));
+  transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+}
+.card:hover .preview-emoji { transform: scale(1.15) rotate(-4deg); }
+
+.card-body { padding: 22px 24px 26px; }
+.card-body h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.card-body p {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.5;
+  margin-bottom: 18px;
+}
+.card-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 20px;
+  margin-right: 6px;
+}
+.tag-squeeze { background:#fde8d8; color:#c4593a; }
+.tag-throw   { background:#fde8d8; color:#c4593a; }
+.tag-ketchup { background:#fde0d8; color:#b03020; }
+.tag-pop     { background:#d8eef5; color:#2a7a9e; }
+.tag-relax   { background:#e8f5d8; color:#3a7a3a; }
+.tag-snow    { background:#e8f0f8; color:#3a5a8e; }
+
+.play-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--rust);
+  letter-spacing: 0.5px;
+}
+.play-btn::after { content:'→'; transition: transform 0.2s; }
+.card:hover .play-btn::after { transform: translateX(4px); }
+
+/* Footer */
+.lobby-footer {
+  margin-top: 72px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 600;
+  opacity: 0.6;
+  letter-spacing: 0.5px;
+}
+
+/* ── GAME SCREEN ── */
+#game-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--cream);
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+}
+#game-screen.visible { display: flex; }
+
+#game-topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  z-index: 200;
+  pointer-events: none;
+}
+#back-btn {
+  pointer-events: all;
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(80,40,20,0.1);
+  border-radius: 20px;
+  padding: 8px 18px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--brown);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.15s, background 0.15s;
+}
+#back-btn:hover { background:white; transform:scale(1.04); }
+#back-btn:active { transform:scale(0.96); }
+
+#game-title-bar {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-left: 14px;
+  opacity: 0.5;
+}
+
+/* game containers */
+.game-wrap {
+  display: none;
+  width: 100%; height: 100%;
+  position: relative;
+}
+.game-wrap.active { display: block; }
+
+/* ════════════════════════════════
+   STRESS BALL GAME
+════════════════════════════════ */
+#sb-canvas { display:block; cursor:none; width:100%; height:100%; }
+#sb-ui {
+  position:absolute; top:64px; left:50%;
+  transform:translateX(-50%);
+  display:flex; gap:20px; pointer-events:none;
+}
+.sb-stat {
+  background:rgba(255,255,255,0.72); backdrop-filter:blur(8px);
+  border-radius:20px; padding:7px 18px;
+  font-size:0.78rem; font-weight:800; color:#555;
+  border:1.5px solid rgba(0,0,0,0.06);
+}
+.sb-stat span { color:#e05a3a; font-size:1rem; }
+#sb-mood {
+  position:absolute; bottom:28px; left:50%; transform:translateX(-50%);
+  font-size:0.95rem; font-weight:900; color:rgba(0,0,0,0.18);
+  letter-spacing:2px; text-transform:uppercase; pointer-events:none;
+  transition: color 0.4s;
+}
+
+/* ════════════════════════════════
+   KETCHUP GAME
+════════════════════════════════ */
+#kt-canvas { display:block; cursor:pointer; width:100%; height:100%; }
+#kt-hint {
+  position:absolute; bottom:28px; left:50%; transform:translateX(-50%);
+  font-size:0.88rem; font-weight:800; color:rgba(0,0,0,0.25);
+  letter-spacing:1px; pointer-events:none; transition:opacity 0.8s;
+  font-family:'Nunito',sans-serif;
+}
+
+/* ════════════════════════════════
+   BUBBLE WRAP GAME
+════════════════════════════════ */
+#bw-wrap {
+  width:100%; height:100%;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  background: #e8f4f8;
+  gap: 20px;
+  padding-top: 56px;
+}
+#bw-stats {
+  display:flex; gap:16px; pointer-events:none;
+}
+.bw-stat {
+  background:rgba(255,255,255,0.8); backdrop-filter:blur(8px);
+  border-radius:20px; padding:7px 18px;
+  font-size:0.78rem; font-weight:800; color:#555;
+  border:1.5px solid rgba(0,0,0,0.06);
+}
+.bw-stat span { color:#2a7a9e; font-size:1rem; }
+#bw-grid {
+  display: grid;
+  gap: 5px;
+  padding: 20px;
+  background: rgba(255,255,255,0.4);
+  border-radius: 20px;
+  border: 1.5px solid rgba(255,255,255,0.8);
+  box-shadow: 0 4px 24px rgba(0,80,120,0.08);
+}
+.bubble {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.08s;
+  will-change: transform;
+}
+.bubble:not(.popped) {
+  background: radial-gradient(circle at 35% 32%, rgba(255,255,255,0.9) 0%, rgba(180,225,245,0.7) 40%, rgba(120,190,220,0.5) 100%);
+  box-shadow: inset -2px -3px 6px rgba(0,80,120,0.15), inset 1px 1px 3px rgba(255,255,255,0.8), 0 2px 8px rgba(0,80,120,0.1);
+  border: 1px solid rgba(255,255,255,0.6);
+}
+.bubble:not(.popped):hover { transform: scale(1.12); }
+.bubble:not(.popped):active { transform: scale(0.82); }
+.bubble.popped {
+  background: rgba(160,200,220,0.18);
+  box-shadow: none;
+  border: 1px dashed rgba(120,180,200,0.3);
+  cursor: default;
+  transform: scale(0.88);
+}
+.bubble.popping {
+  animation: pop 0.18s ease-out forwards;
+}
+@keyframes pop {
+  0%   { transform: scale(1.2); }
+  40%  { transform: scale(0.75); }
+  100% { transform: scale(0.88); }
+}
+#bw-footer {
+  display:flex; gap:12px; align-items:center;
+}
+#bw-reset {
+  background: rgba(42,122,158,0.12);
+  border: 1.5px solid rgba(42,122,158,0.25);
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-family:'Nunito',sans-serif;
+  font-size:0.8rem; font-weight:800;
+  color: #2a7a9e; cursor:pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+#bw-reset:hover { background: rgba(42,122,158,0.2); transform:scale(1.04); }
+/* ════════════════════════════════
+   SNOW GLOBE
+════════════════════════════════ */
+#sg-wrap {
+  width:100%; height:100%;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  background: linear-gradient(180deg, #1a2540 0%, #2a3a60 100%);
+  padding-top:56px; gap:0;
+  cursor: pointer;
+  user-select:none;
+}
+#sg-canvas { display:block; }
+#sg-hint {
+  margin-top:18px;
+  font-size:0.85rem; font-weight:800;
+  color:rgba(255,255,255,0.3);
+  letter-spacing:1.5px; text-transform:uppercase;
+  pointer-events:none; transition:opacity 0.8s;
+}
+
+#bw-msg {
+  font-size:0.85rem; font-weight:800;
+  color: rgba(0,80,120,0.35); letter-spacing:1px;
+  text-transform: uppercase;
+  font-family:'Nunito',sans-serif;
+}
 </style>
 </head>
 <body>
-<div id="ui">
-  <div class="stat">squeezes <span id="sqCount">0</span></div>
-  <div class="stat">throws <span id="throwCount">0</span></div>
-  <div class="stat">bounces <span id="bounceCount">0</span></div>
+
+<!-- ══════════════════════════════════════
+     LOBBY
+══════════════════════════════════════ -->
+<div id="lobby">
+  <div class="lobby-header">
+    <div class="eyebrow">✦ a quiet little place ✦</div>
+    <h1>Marionsson's<br><em>Stress Relief Corner</em></h1>
+    <p>Four tiny games. No goals, no scores that matter. Just take a breath and play.</p>
+  </div>
+
+  <div class="divider"><span>❧</span></div>
+
+  <div class="cards">
+
+    <div class="card" onclick="launchGame('stressball')">
+      <div class="card-preview ball-bg">
+        <span class="preview-emoji">🟠</span>
+      </div>
+      <div class="card-body">
+        <h2>Stress Ball</h2>
+        <p>Grab it. Squeeze it. Throw it at the wall. It won't judge you.</p>
+        <div>
+          <span class="card-tag tag-squeeze">squeeze</span>
+          <span class="card-tag tag-throw">throw</span>
+        </div>
+        <div class="play-btn">Play now</div>
+      </div>
+    </div>
+
+    <div class="card" onclick="launchGame('ketchup')">
+      <div class="card-preview ketchup-bg">
+        <span class="preview-emoji">🍟</span>
+      </div>
+      <div class="card-body">
+        <h2>Ketchup Fries</h2>
+        <p>Hold the bottle and squeeze. Watch the ketchup drip down the fries.</p>
+        <div>
+          <span class="card-tag tag-ketchup">squeeze</span>
+          <span class="card-tag tag-relax">satisfying</span>
+        </div>
+        <div class="play-btn">Play now</div>
+      </div>
+    </div>
+
+    <div class="card" onclick="launchGame('bubbles')">
+      <div class="card-preview bubble-bg">
+        <span class="preview-emoji">🫧</span>
+      </div>
+      <div class="card-body">
+        <h2>Bubble Wrap</h2>
+        <p>An infinite sheet of bubble wrap. Pop them one by one or go feral.</p>
+        <div>
+          <span class="card-tag tag-pop">pop</span>
+          <span class="card-tag tag-relax">relax</span>
+        </div>
+        <div class="play-btn">Play now</div>
+      </div>
+    </div>
+
+    <div class="card" onclick="launchGame('snowglobe')">
+      <div class="card-preview snow-bg">
+        <span class="preview-emoji">🔮</span>
+      </div>
+      <div class="card-body">
+        <h2>Snow Globe</h2>
+        <p>Shake the globe, watch the snow swirl and settle. Shake it again.</p>
+        <div>
+          <span class="card-tag tag-snow">shake</span>
+          <span class="card-tag tag-relax">cozy</span>
+        </div>
+        <div class="play-btn">Play now</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="lobby-footer">made with care · no data collected · just vibes</div>
 </div>
-<canvas id="c"></canvas>
-<div id="mood">grab me</div>
+
+
+<!-- ══════════════════════════════════════
+     GAME SCREEN
+══════════════════════════════════════ -->
+<div id="game-screen">
+  <div id="game-topbar">
+    <button id="back-btn" onclick="goBack()">← back</button>
+    <span id="game-title-bar"></span>
+  </div>
+
+  <!-- Stress Ball -->
+  <div class="game-wrap" id="wrap-stressball">
+    <canvas id="sb-canvas"></canvas>
+    <div id="sb-ui">
+      <div class="sb-stat">squeezes <span id="sb-sq">0</span></div>
+      <div class="sb-stat">throws <span id="sb-th">0</span></div>
+      <div class="sb-stat">bounces <span id="sb-bn">0</span></div>
+    </div>
+    <div id="sb-mood">grab me</div>
+  </div>
+
+  <!-- Ketchup -->
+  <div class="game-wrap" id="wrap-ketchup">
+    <canvas id="kt-canvas"></canvas>
+    <div id="kt-hint">hold the bottle to squeeze 🤌</div>
+  </div>
+
+  <!-- Bubble Wrap -->
+  <div class="game-wrap" id="wrap-bubbles">
+    <div id="bw-wrap">
+      <div id="bw-stats">
+        <div class="bw-stat">popped <span id="bw-count">0</span></div>
+        <div class="bw-stat">remaining <span id="bw-left">80</span></div>
+      </div>
+      <div id="bw-grid"></div>
+      <div id="bw-footer">
+        <button id="bw-reset" onclick="resetBubbles()">new sheet</button>
+        <div id="bw-msg">pop away 🫧</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Snow Globe -->
+  <div class="game-wrap" id="wrap-snowglobe">
+    <div id="sg-wrap" id="sg-clickzone">
+      <canvas id="sg-canvas"></canvas>
+      <div id="sg-hint">click to shake ❄️</div>
+    </div>
+  </div>
+
+</div>
+
 
 <script>
-const cv = document.getElementById('c');
-const ctx = cv.getContext('2d');
-let W, H;
+/* ══════════════════════════════════════════════════════════
+   ROUTING
+══════════════════════════════════════════════════════════ */
+const gameScreen = document.getElementById('game-screen');
+const lobby      = document.getElementById('lobby');
+let activeGame   = null;
+let sbStarted    = false;
+let ktStarted    = false;
+let sgStarted    = false;
 
-function resize(){
-  W = cv.width  = window.innerWidth;
-  H = cv.height = window.innerHeight;
-}
-resize();
-window.addEventListener('resize', resize);
-
-// ── Ball state ──
-const ball = {
-  x: 0, y: 0,       // set after resize
-  vx: 0, vy: 0,
-  r: 72,             // rest radius
-  // deformation: we store a squish matrix (scaleX, scaleY, rotation)
-  sx: 1, sy: 1,      // current scale (sx*sy ≈ 1 for volume conservation)
-  rot: 0,            // rotation of squish axis
-  // colour — cycles on bounce
-  hue: 14,
-  // physics
-  mass: 1,
-  restitution: 0.72,
-  friction: 0.985,
-};
-
-// Position after first resize
-function initBall(){
-  ball.x = W/2;
-  ball.y = H/2;
-}
-initBall();
-
-// ── Interaction state ──
-let dragging = false;
-let dragOffX=0, dragOffY=0;
-let mouseX=W/2, mouseY=H/2;
-let prevMouseX=W/2, prevMouseY=H/2;
-let prevT = performance.now();
-let grabT = 0;
-let squeezePower = 0;   // 0..1 while held
-let isThrowing = false;
-let throwVX=0, throwVY=0;
-
-// Stats
-let sqCount=0, throwCount=0, bounceCount=0;
-const sqEl=document.getElementById('sqCount');
-const thEl=document.getElementById('throwCount');
-const bnEl=document.getElementById('bounceCount');
-const moodEl=document.getElementById('mood');
-
-const MOODS = [
-  [0,   'grab me'],
-  [3,   'oooh that\'s nice'],
-  [8,   'getting squeezed 😬'],
-  [15,  'okay okay okay'],
-  [25,  'please stop 😭'],
-  [40,  'you monster'],
-  [60,  'i am begging you'],
-  [100, '...i feel nothing'],
-];
-function updateMood(){
-  let msg = MOODS[0][1];
-  for(const [n,m] of MOODS){ if(sqCount>=n) msg=m; }
-  moodEl.textContent = msg;
+function launchGame(id){
+  lobby.classList.add('hiding');
+  setTimeout(()=>{
+    lobby.style.display='none';
+    gameScreen.classList.add('visible');
+    document.querySelectorAll('.game-wrap').forEach(w=>w.classList.remove('active'));
+    document.getElementById('wrap-'+id).classList.add('active');
+    document.getElementById('game-title-bar').textContent =
+      id==='stressball' ? 'Stress Ball' :
+      id==='ketchup'    ? 'Ketchup Fries' :
+      id==='bubbles'    ? 'Bubble Wrap' : 'Snow Globe';
+    activeGame = id;
+    if(id==='stressball' && !sbStarted){ initStressBall(); sbStarted=true; }
+    if(id==='ketchup'    && !ktStarted){ initKetchup();    ktStarted=true; }
+    if(id==='bubbles'){ initBubbles(); }
+    if(id==='snowglobe' && !sgStarted){ initSnowGlobe(); sgStarted=true; }
+  }, 320);
 }
 
-// Colour palette — soft, tactile
-const PALETTES = [
-  { hue:14,  name:'tangerine' },
-  { hue:340, name:'bubblegum' },
-  { hue:200, name:'sky' },
-  { hue:145, name:'mint' },
-  { hue:55,  name:'butter' },
-  { hue:275, name:'lavender' },
-];
-let paletteIdx=0;
+function goBack(){
+  gameScreen.classList.remove('visible');
+  lobby.style.display='flex';
+  setTimeout(()=>lobby.classList.remove('hiding'), 10);
+  // restore cursor
+  document.body.style.cursor = '';
+}
 
-// ── Shadow history for motion blur feel ──
-const trail = [];
 
-// ── Jiggle / wobble ──
-let wobble = 0;   // extra deformation energy, decays
-let wobbleAngle = 0;
+/* ══════════════════════════════════════════════════════════
+   STRESS BALL
+══════════════════════════════════════════════════════════ */
+function initStressBall(){
+  const cv  = document.getElementById('sb-canvas');
+  const ctx = cv.getContext('2d');
+  let W, H;
 
-// ── Canvas cursor ──
-let cursorPressing = false;
+  const ball={x:0,y:0,vx:0,vy:0,r:72,sx:1,sy:1,rot:0,hue:14,restitution:0.72,friction:0.985};
+  let sbInited=false;
 
-// ── DRAW ──
-function drawBall(){
-  const { x, y, r, sx, sy, rot, hue } = ball;
-  const totalWobble = wobble;
-  const wsx = sx + Math.cos(wobbleAngle)*totalWobble;
-  const wsy = sy - Math.cos(wobbleAngle)*totalWobble*0.5;
+  function resize(){
+    W = cv.width  = cv.offsetWidth;
+    H = cv.height = cv.offsetHeight;
+    if(!sbInited){ ball.x=W/2; ball.y=H/2; sbInited=true; }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  let dragging=false,dragOffX=0,dragOffY=0;
+  let mouseX=W/2,mouseY=H/2,prevMouseX=W/2,prevMouseY=H/2,prevT=performance.now();
+  let squeezePower=0,wobble=0,wobbleAngle=0,cursorPressing=false;
+  let sqCount=0,throwCount=0,bounceCount=0,paletteIdx=0;
+  const sqEl=document.getElementById('sb-sq');
+  const thEl=document.getElementById('sb-th');
+  const bnEl=document.getElementById('sb-bn');
+  const moodEl=document.getElementById('sb-mood');
+  const PALETTES=[{hue:14},{hue:340},{hue:200},{hue:145},{hue:55},{hue:275}];
+  const MOODS=[[0,'grab me'],[3,'oooh that\'s nice'],[8,'getting squeezed 😬'],[15,'okay okay okay'],[25,'please stop 😭'],[40,'you monster'],[60,'i am begging you'],[100,'...i feel nothing']];
 
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(rot);
-  ctx.scale(wsx, wsy);
+  function updateMood(){ let m=MOODS[0][1]; for(const [n,s] of MOODS) if(sqCount>=n) m=s; moodEl.textContent=m; }
+  function nextColour(){ paletteIdx=(paletteIdx+1)%PALETTES.length; ball.hue=PALETTES[paletteIdx].hue; }
 
-  // Shadow
-  ctx.save();
-  ctx.scale(1, 0.28);
-  ctx.translate(0, r*3.5);
-  const sdw = ctx.createRadialGradient(0,0,0,0,0,r*wsx);
-  sdw.addColorStop(0,'rgba(0,0,0,0.22)');
-  sdw.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.beginPath(); ctx.ellipse(0,0,r*wsx*1.1,r*0.9,0,0,Math.PI*2);
-  ctx.fillStyle=sdw; ctx.fill();
-  ctx.restore();
-
-  // Main ball body
-  const grad = ctx.createRadialGradient(-r*0.28, -r*0.32, r*0.05, 0, 0, r*1.05);
-  grad.addColorStop(0,   `hsl(${hue},100%,80%)`);
-  grad.addColorStop(0.45,`hsl(${hue},90%,62%)`);
-  grad.addColorStop(0.8, `hsl(${hue},82%,48%)`);
-  grad.addColorStop(1,   `hsl(${hue},78%,36%)`);
-
-  ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI*2);
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  // Specular highlight
-  const spec = ctx.createRadialGradient(-r*0.3, -r*0.35, 0, -r*0.25, -r*0.28, r*0.42);
-  spec.addColorStop(0,'rgba(255,255,255,0.72)');
-  spec.addColorStop(0.5,'rgba(255,255,255,0.18)');
-  spec.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2);
-  ctx.fillStyle=spec; ctx.fill();
-
-  // Second smaller highlight
-  ctx.beginPath(); ctx.arc(-r*0.18, -r*0.22, r*0.14, 0, Math.PI*2);
-  ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.fill();
-
-  // Subtle rim darkening
-  const rim = ctx.createRadialGradient(0,0,r*0.7,0,0,r);
-  rim.addColorStop(0,'rgba(0,0,0,0)');
-  rim.addColorStop(1,'rgba(0,0,0,0.18)');
-  ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2);
-  ctx.fillStyle=rim; ctx.fill();
-
-  // Texture dots when squeezed
-  if(squeezePower > 0.1 || wobble > 0.05){
-    const n = 6;
-    const intensity = Math.min(squeezePower + wobble, 1);
-    ctx.globalAlpha = intensity * 0.12;
-    for(let i=0;i<n;i++){
-      const a = (i/n)*Math.PI*2;
-      const dr = r*0.55;
-      ctx.beginPath();
-      ctx.arc(Math.cos(a)*dr, Math.sin(a)*dr, r*0.07, 0, Math.PI*2);
-      ctx.fillStyle=`hsl(${hue},60%,30%)`;
-      ctx.fill();
-    }
-    ctx.globalAlpha=1;
+  function drawBall(){
+    const {x,y,r,sx,sy,rot,hue}=ball;
+    const wsx=sx+Math.cos(wobbleAngle)*wobble, wsy=sy-Math.cos(wobbleAngle)*wobble*0.5;
+    ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.scale(wsx,wsy);
+    // shadow
+    ctx.save(); ctx.scale(1,0.28); ctx.translate(0,r*3.5);
+    const sdw=ctx.createRadialGradient(0,0,0,0,0,r*wsx);
+    sdw.addColorStop(0,'rgba(0,0,0,0.22)'); sdw.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.beginPath(); ctx.ellipse(0,0,r*wsx*1.1,r*0.9,0,0,Math.PI*2); ctx.fillStyle=sdw; ctx.fill(); ctx.restore();
+    // body
+    const g=ctx.createRadialGradient(-r*.28,-r*.32,r*.05,0,0,r*1.05);
+    g.addColorStop(0,`hsl(${hue},100%,80%)`); g.addColorStop(.45,`hsl(${hue},90%,62%)`);
+    g.addColorStop(.8,`hsl(${hue},82%,48%)`); g.addColorStop(1,`hsl(${hue},78%,36%)`);
+    ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
+    // specular
+    const sp=ctx.createRadialGradient(-r*.3,-r*.35,0,-r*.25,-r*.28,r*.42);
+    sp.addColorStop(0,'rgba(255,255,255,0.72)'); sp.addColorStop(.5,'rgba(255,255,255,0.18)'); sp.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fillStyle=sp; ctx.fill();
+    ctx.beginPath(); ctx.arc(-r*.18,-r*.22,r*.14,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.fill();
+    const rim=ctx.createRadialGradient(0,0,r*.7,0,0,r);
+    rim.addColorStop(0,'rgba(0,0,0,0)'); rim.addColorStop(1,'rgba(0,0,0,0.18)');
+    ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fillStyle=rim; ctx.fill();
+    ctx.restore();
   }
 
-  ctx.restore();
-}
-
-function drawCursor(){
-  const pressing = cursorPressing;
-  ctx.save();
-  ctx.translate(mouseX, mouseY);
-  // Ring
-  ctx.beginPath(); ctx.arc(0,0, pressing?10:13, 0, Math.PI*2);
-  ctx.strokeStyle = pressing ? `hsl(${ball.hue},80%,45%)` : 'rgba(0,0,0,0.3)';
-  ctx.lineWidth = pressing?3:1.5; ctx.stroke();
-  // Centre dot
-  ctx.beginPath(); ctx.arc(0,0,2.5,0,Math.PI*2);
-  ctx.fillStyle = pressing ? `hsl(${ball.hue},80%,45%)` : 'rgba(0,0,0,0.4)';
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawBackground(){
-  // Soft textured background
-  ctx.fillStyle = '#f0ebe3';
-  ctx.fillRect(0,0,W,H);
-
-  // Subtle grid
-  ctx.strokeStyle = 'rgba(0,0,0,0.04)';
-  ctx.lineWidth = 1;
-  const step=40;
-  for(let x=0;x<W;x+=step){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
-  for(let y=0;y<H;y+=step){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
-}
-
-// ── PHYSICS ──
-const GRAVITY = 980;
-const FLOOR_BOUNCE_THRESHOLD = 60; // px/s
-
-function physics(dt){
-  if(dragging) return;
-
-  ball.vy += GRAVITY * dt;
-  ball.x  += ball.vx * dt;
-  ball.y  += ball.vy * dt;
-  ball.vx *= ball.friction;
-
-  const floorY = H - ball.r * ball.sy - 18;
-  const ceilY  = ball.r * ball.sy;
-  const wallL  = ball.r * ball.sx;
-  const wallR  = W - ball.r * ball.sx;
-
-  // Floor
-  if(ball.y >= floorY){
-    const speed = Math.abs(ball.vy);
-    ball.y = floorY;
-    if(speed > FLOOR_BOUNCE_THRESHOLD){
-      ball.vy = -ball.vy * ball.restitution;
-      const impact = Math.min(speed/1200, 0.5);
-      triggerBounce(impact, Math.PI/2);
-      bounceCount++;
-      bnEl.textContent=bounceCount;
-      // colour shift on hard bounce
-      if(speed > 400){ nextColour(); }
-    } else {
-      ball.vy = 0;
-      ball.vx *= 0.88;
-    }
+  function drawCursor(){
+    ctx.save(); ctx.translate(mouseX,mouseY);
+    ctx.beginPath(); ctx.arc(0,0,cursorPressing?10:13,0,Math.PI*2);
+    ctx.strokeStyle=cursorPressing?`hsl(${ball.hue},80%,45%)`:'rgba(0,0,0,0.3)';
+    ctx.lineWidth=cursorPressing?3:1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(0,0,2.5,0,Math.PI*2);
+    ctx.fillStyle=cursorPressing?`hsl(${ball.hue},80%,45%)`:'rgba(0,0,0,0.4)'; ctx.fill();
+    ctx.restore();
   }
-  // Ceiling
-  if(ball.y <= ceilY){
-    ball.y = ceilY;
-    ball.vy = Math.abs(ball.vy)*ball.restitution;
-    triggerBounce(0.2, Math.PI/2);
+
+  function physics(dt){
+    if(dragging) return;
+    ball.vy += 980*dt; ball.x+=ball.vx*dt; ball.y+=ball.vy*dt; ball.vx*=ball.friction;
+    const floorY=H-ball.r*ball.sy-18, ceilY=ball.r*ball.sy, wallL=ball.r*ball.sx, wallR=W-ball.r*ball.sx;
+    if(ball.y>=floorY){ const sp=Math.abs(ball.vy); ball.y=floorY; if(sp>60){ ball.vy=-ball.vy*ball.restitution; const imp=Math.min(sp/1200,.5); wobble=Math.min(wobble+imp*.9,.55); wobbleAngle=Math.PI/2; ball.sx=1+imp*.6; ball.sy=1-imp*.35; ball.rot=Math.PI/2; bounceCount++; bnEl.textContent=bounceCount; if(sp>400) nextColour(); } else { ball.vy=0; ball.vx*=.88; } }
+    if(ball.y<=ceilY){ ball.y=ceilY; ball.vy=Math.abs(ball.vy)*ball.restitution; wobble=Math.min(wobble+.18,.55); }
+    if(ball.x<=wallL){ ball.x=wallL; ball.vx=Math.abs(ball.vx)*ball.restitution; wobble=Math.min(wobble+.18,.55); }
+    if(ball.x>=wallR){ ball.x=wallR; ball.vx=-Math.abs(ball.vx)*ball.restitution; wobble=Math.min(wobble+.18,.55); }
   }
-  // Walls
-  if(ball.x <= wallL){
-    ball.x = wallL;
-    ball.vx = Math.abs(ball.vx)*ball.restitution;
-    triggerBounce(0.2, 0);
+
+  function updateSquish(dt){
+    if(dragging){ squeezePower=Math.min(squeezePower+dt*1.4,1); const ang=Math.atan2(mouseY-ball.y,mouseX-ball.x); ball.rot=ang; ball.sx=1+squeezePower*.32; ball.sy=1-squeezePower*.22; }
+    else { squeezePower=Math.max(0,squeezePower-dt*4); ball.sx+=(1-ball.sx)*dt*14; ball.sy+=(1-ball.sy)*dt*14; ball.rot*=.88; }
+    wobble*=.92; if(wobble<.001) wobble=0;
   }
-  if(ball.x >= wallR){
-    ball.x = wallR;
-    ball.vx = -Math.abs(ball.vx)*ball.restitution;
-    triggerBounce(0.2, 0);
+
+  let lastT=performance.now();
+  function loop(ts){
+    if(activeGame!=='stressball'){ requestAnimationFrame(loop); return; }
+    const dt=Math.min((ts-lastT)/1000,.05); lastT=ts;
+    physics(dt); updateSquish(dt);
+    ctx.fillStyle='#f0ebe3'; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='rgba(0,0,0,0.04)'; ctx.lineWidth=1;
+    for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    drawBall(); drawCursor();
+    requestAnimationFrame(loop);
   }
-}
 
-function triggerBounce(power, angle){
-  wobble = Math.min(wobble + power*0.9, 0.55);
-  wobbleAngle = angle;
-  ball.sx = 1 + power*0.6;
-  ball.sy = 1 - power*0.35;
-  ball.rot = angle;
-}
+  function ptInBall(px,py){ const dx=px-ball.x,dy=py-ball.y; return Math.sqrt(dx*dx+dy*dy)<ball.r*1.1; }
+  function onDown(px,py){ if(ptInBall(px,py)){ dragging=true; cursorPressing=true; dragOffX=ball.x-px; dragOffY=ball.y-py; ball.vx=0; ball.vy=0; sqCount++; sqEl.textContent=sqCount; updateMood(); document.body.style.cursor='none'; } }
+  function onMove(px,py){ prevMouseX=mouseX; prevMouseY=mouseY; mouseX=px; mouseY=py; if(dragging){ ball.x=px+dragOffX; ball.y=py+dragOffY; } }
+  function onUp(px,py,ts){ if(dragging){ const dt=Math.max((ts-(prevT||ts))/1000,.008); const vx=(px-prevMouseX)/dt,vy=(py-prevMouseY)/dt,sp=Math.sqrt(vx*vx+vy*vy); ball.vx=vx*.85; ball.vy=vy*.85; if(sp>200){ throwCount++; thEl.textContent=throwCount; } wobble=Math.min(wobble+Math.min(squeezePower,.4)*.9,.55); dragging=false; cursorPressing=false; } prevT=ts; }
 
-function nextColour(){
-  paletteIdx = (paletteIdx+1) % PALETTES.length;
-  ball.hue = PALETTES[paletteIdx].hue;
-}
-
-// ── SQUISH while held ──
-function updateSquish(dt){
-  if(dragging){
-    squeezePower = Math.min(squeezePower + dt*1.4, 1);
-    const s = squeezePower;
-    // squish toward cursor direction from centre
-    const dx = mouseX - ball.x, dy = mouseY - ball.y;
-    const ang = Math.atan2(dy,dx);
-    ball.rot = ang;
-    ball.sx = 1 + s*0.32;
-    ball.sy = 1 - s*0.22;
-  } else {
-    squeezePower = Math.max(0, squeezePower - dt*4);
-    // spring back
-    ball.sx += (1 - ball.sx)*dt*14;
-    ball.sy += (1 - ball.sy)*dt*14;
-    ball.rot *= 0.88;
-  }
-  // wobble decay
-  wobble *= 0.92;
-  if(wobble < 0.001) wobble = 0;
-}
-
-// ── MAIN LOOP ──
-let lastT = performance.now();
-function loop(ts){
-  const dt = Math.min((ts-lastT)/1000, 0.05);
-  lastT = ts;
-
-  physics(dt);
-  updateSquish(dt);
-
-  drawBackground();
-  drawBall();
-  drawCursor();
+  cv.addEventListener('mousedown',e=>onDown(e.clientX,e.clientY));
+  window.addEventListener('mousemove',e=>{ prevT=performance.now(); onMove(e.clientX,e.clientY); });
+  window.addEventListener('mouseup',e=>onUp(e.clientX,e.clientY,performance.now()));
+  cv.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];onDown(t.clientX,t.clientY);},{passive:false});
+  window.addEventListener('touchmove',e=>{if(activeGame!=='stressball')return;e.preventDefault();const t=e.touches[0];onMove(t.clientX,t.clientY);},{passive:false});
+  window.addEventListener('touchend',e=>{const t=e.changedTouches[0];onUp(t.clientX,t.clientY,performance.now());});
 
   requestAnimationFrame(loop);
 }
 
-// ── INPUT ──
-function ptInBall(px, py){
-  const dx=px-ball.x, dy=py-ball.y;
-  return Math.sqrt(dx*dx+dy*dy) < ball.r*1.1;
+
+/* ══════════════════════════════════════════════════════════
+   KETCHUP FRIES
+══════════════════════════════════════════════════════════ */
+function initKetchup(){
+  const cv=document.getElementById('kt-canvas');
+  const cx=cv.getContext('2d');
+  let W,H;
+  function resize(){ W=cv.width=cv.offsetWidth; H=cv.height=cv.offsetHeight; }
+  resize(); window.addEventListener('resize',resize);
+
+  const BX_R=0.41; // bottle centre as fraction of W
+  let BX, BODY_T,BODY_B,NECK_B,CAP_B,NOZ_B,BODY_HW,NECK_HW,CAP_HW,NOZ_HW;
+  function calcLayout(){
+    BX=W*BX_R; const scale=Math.min(W,H)/520;
+    BODY_T=48*scale; BODY_B=282*scale; NECK_B=316*scale; CAP_B=332*scale; NOZ_B=344*scale;
+    BODY_HW=28*scale; NECK_HW=8*scale; CAP_HW=12*scale; NOZ_HW=5*scale;
+  }
+  calcLayout(); window.addEventListener('resize',()=>{resize();calcLayout();});
+
+  let sq=0,squeezing=false,releasing=false,streamLen=0;
+  // ketchup volume per fry slot (how much has landed on each fry top)
+  // and running drips down each fry
+  const NUM_SLOTS = 7;
+  const fryKetchup = new Array(NUM_SLOTS).fill(0);   // pool volume on each fry top 0..1
+  const FRY_DRIPS = Array.from({length:NUM_SLOTS},()=>[]); // active drips per fry
+  let dripTimer=0, totalSqueezeTime=0;
+
+  function getFrySlots(){
+    const s=Math.min(W,H)/520, py=H-52*s;
+    return [
+      {x:W*.24,topY:py-90*s, botY:py-3*s,  a:-.13},
+      {x:W*.30,topY:py-97*s, botY:py-5*s,  a:-.05},
+      {x:W*.37,topY:py-101*s,botY:py-7*s,  a:.03 },
+      {x:W*.43,topY:py-103*s,botY:py-8*s,  a:-.02},
+      {x:W*.50,topY:py-100*s,botY:py-7*s,  a:.05 },
+      {x:W*.56,topY:py-95*s, botY:py-5*s,  a:.09 },
+      {x:W*.62,topY:py-87*s, botY:py-3*s,  a:.14 },
+    ];
+  }
+
+  function rr(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.quadraticCurveTo(x+w,y,x+w,y+r);c.lineTo(x+w,y+h-r);c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);c.lineTo(x+r,y+h);c.quadraticCurveTo(x,y+h,x,y+h-r);c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);c.closePath(); }
+
+  function drawBottle(s){
+    const sc=Math.min(W,H)/520;
+    const sx=1+s*.055,sy=1-s*.025,midY=(BODY_T+BODY_B)/2;
+    cx.save(); cx.translate(BX,midY); cx.scale(sx,sy); cx.translate(-BX,-midY);
+    const g=cx.createLinearGradient(BX-BODY_HW,0,BX+BODY_HW,0);
+    g.addColorStop(0,'#8b1e15');g.addColorStop(.2,'#c0392b');g.addColorStop(.5,'#e84c3c');g.addColorStop(.8,'#c0392b');g.addColorStop(1,'#8b1e15');
+    cx.beginPath();cx.moveTo(BX-BODY_HW+6*sc,BODY_T);cx.bezierCurveTo(BX-BODY_HW-5*sc,BODY_T+50*sc,BX-BODY_HW-5*sc,BODY_B-50*sc,BX-BODY_HW+4*sc,BODY_B);cx.lineTo(BX+BODY_HW-4*sc,BODY_B);cx.bezierCurveTo(BX+BODY_HW+5*sc,BODY_B-50*sc,BX+BODY_HW+5*sc,BODY_T+50*sc,BX+BODY_HW-6*sc,BODY_T);cx.closePath();cx.fillStyle=g;cx.fill();cx.strokeStyle='#6b150e';cx.lineWidth=1.5;cx.stroke();
+    cx.beginPath();cx.ellipse(BX,BODY_T,BODY_HW-4*sc,8*sc,0,0,Math.PI*2);const tg=cx.createLinearGradient(BX,BODY_T-8*sc,BX,BODY_T+8*sc);tg.addColorStop(0,'#e84c3c');tg.addColorStop(1,'#8b1e15');cx.fillStyle=tg;cx.fill();cx.strokeStyle='#6b150e';cx.lineWidth=1.2;cx.stroke();
+    const lw=38*sc,lh=72*sc; rr(cx,BX-lw/2,BODY_T+28*sc,lw,lh,4*sc);cx.fillStyle='rgba(255,255,255,0.94)';cx.fill();cx.strokeStyle='#e74c3c';cx.lineWidth=1.4;cx.stroke();
+    cx.fillStyle='#c0392b';cx.font=`bold ${7.5*sc}px Nunito,sans-serif`;cx.textAlign='center';cx.fillText('DROSAN',BX,BODY_T+46*sc);cx.fillStyle='#333';cx.font=`${7*sc}px Nunito,sans-serif`;cx.fillText('Tomato',BX,BODY_T+60*sc);cx.fillText('Ketchup',BX,BODY_T+72*sc);
+    cx.beginPath();cx.arc(BX,BODY_T+83*sc,6*sc,0,Math.PI*2);cx.fillStyle='#e74c3c';cx.fill();
+    cx.beginPath();cx.moveTo(BX-2*sc,BODY_T+77*sc);cx.quadraticCurveTo(BX,BODY_T+74*sc,BX+2*sc,BODY_T+77*sc);cx.strokeStyle='#2ecc71';cx.lineWidth=1.3;cx.stroke();
+    cx.beginPath();cx.moveTo(BX-BODY_HW+8*sc,BODY_T+12*sc);cx.quadraticCurveTo(BX-BODY_HW+6*sc,BODY_T+90*sc,BX-BODY_HW+8*sc,BODY_B-18*sc);cx.strokeStyle='rgba(255,255,255,0.22)';cx.lineWidth=3.5;cx.lineCap='round';cx.stroke();
+    cx.restore();
+    const ng=cx.createLinearGradient(BX-NECK_HW,0,BX+NECK_HW,0);ng.addColorStop(0,'#6b150e');ng.addColorStop(.5,'#c0392b');ng.addColorStop(1,'#6b150e');cx.beginPath();cx.moveTo(BX-NECK_HW-2*sc,BODY_B);cx.lineTo(BX-NECK_HW,NECK_B);cx.lineTo(BX+NECK_HW,NECK_B);cx.lineTo(BX+NECK_HW+2*sc,BODY_B);cx.closePath();cx.fillStyle=ng;cx.fill();cx.strokeStyle='#6b150e';cx.lineWidth=1;cx.stroke();
+    rr(cx,BX-CAP_HW,NECK_B,CAP_HW*2,CAP_B-NECK_B,3*sc);cx.fillStyle='#a02a20';cx.fill();cx.strokeStyle='#6b150e';cx.lineWidth=1.1;cx.stroke();
+    rr(cx,BX-NOZ_HW,CAP_B,NOZ_HW*2,NOZ_B-CAP_B,2*sc);cx.fillStyle='#6b150e';cx.fill();
+  }
+
+  function fingerSpine(ox,oy,len,baseAngle,curl){
+    const b1=curl*.55,b2=curl*.72,b3=curl*.55,s1=len*.32,s2=len*.30,s3=len*.38;
+    let x=ox,y=oy,a=baseAngle; const pts=[{x,y}];
+    [[s1,b1],[s2,b2],[s3,b3]].forEach(([seg,b])=>{x+=Math.cos(a)*seg;y+=Math.sin(a)*seg;pts.push({x,y});a+=b;});
+    return pts;
+  }
+  function drawFingerFromSpine(pts,baseW,skinGrd){
+    const n=pts.length,widths=[baseW,baseW*.88,baseW*.74,baseW*.38];
+    function perp(i){const prev=i>0?pts[i-1]:pts[0],next=i<n-1?pts[i+1]:pts[n-1],dx=next.x-prev.x,dy=next.y-prev.y,l=Math.sqrt(dx*dx+dy*dy)||1;return{px:-dy/l,py:dx/l};}
+    const top=[],bot=[];
+    for(let i=0;i<n;i++){const{px,py}=perp(i),w=widths[i];top.push({x:pts[i].x+px*w,y:pts[i].y+py*w});bot.push({x:pts[i].x-px*w,y:pts[i].y-py*w});}
+    cx.beginPath();cx.moveTo(top[0].x,top[0].y);
+    for(let i=1;i<n;i++){const cpx=(top[i-1].x+top[i].x)/2,cpy=(top[i-1].y+top[i].y)/2;cx.quadraticCurveTo(top[i-1].x,top[i-1].y,cpx,cpy);}
+    cx.lineTo(top[n-1].x,top[n-1].y);
+    const tip=pts[n-1],{px:tpx,py:tpy}=perp(n-1);
+    cx.arc(tip.x,tip.y,widths[n-1],Math.atan2(tpy,tpx),Math.atan2(-tpy,-tpx));
+    for(let i=n-2;i>=0;i--){cx.quadraticCurveTo(bot[i+1].x,bot[i+1].y,(bot[i+1].x+bot[i].x)/2,(bot[i+1].y+bot[i].y)/2);}
+    cx.lineTo(bot[0].x,bot[0].y);cx.closePath();cx.fillStyle=skinGrd;cx.fill();cx.strokeStyle='rgba(150,60,40,0.45)';cx.lineWidth=1;cx.stroke();
+    [1,2].forEach(i=>{const{px,py}=perp(i),w=widths[i],p=pts[i];cx.beginPath();cx.moveTo(p.x+px*w*.85,p.y+py*w*.85);cx.quadraticCurveTo(p.x,p.y+2,p.x-px*w*.85,p.y-py*w*.85);cx.strokeStyle='rgba(140,55,35,0.25)';cx.lineWidth=1.2;cx.stroke();});
+    const td=(()=>{const dx=pts[n-1].x-pts[n-2].x,dy=pts[n-1].y-pts[n-2].y;return Math.atan2(dy,dx);})();
+    cx.save();cx.translate(pts[n-1].x,pts[n-1].y);cx.rotate(td);const nw=widths[n-1]*1.3,nh=widths[n-2]*.9;cx.beginPath();cx.roundRect(-nw/2,-nh*.8,nw,nh*.65,nw*.35);cx.fillStyle='rgba(255,210,200,0.55)';cx.fill();cx.restore();
+  }
+
+  function drawHand(s){
+    const sc=Math.min(W,H)/520;
+    const palmX=BX+30*sc,palmY=128*sc,palmW=88*sc,palmH=122*sc;
+    function makeSkinGrd(x0,x1){const g=cx.createLinearGradient(x0,0,x1,0);g.addColorStop(0,'#c97060');g.addColorStop(.3,'#FDBCB4');g.addColorStop(.7,'#f0a898');g.addColorStop(1,'#d4806a');return g;}
+    cx.save();cx.beginPath();
+    cx.moveTo(palmX,palmY);cx.lineTo(palmX+palmW+60*sc,palmY);cx.quadraticCurveTo(palmX+palmW+60*sc+18*sc,palmY,palmX+palmW+60*sc+18*sc,palmY+20*sc);cx.lineTo(palmX+palmW+60*sc+18*sc,palmY+palmH-20*sc);cx.quadraticCurveTo(palmX+palmW+60*sc+18*sc,palmY+palmH,palmX+palmW+60*sc,palmY+palmH);cx.lineTo(palmX,palmY+palmH);cx.closePath();
+    cx.fillStyle=makeSkinGrd(palmX,palmX+palmW+60*sc);cx.fill();cx.strokeStyle='rgba(150,60,40,0.4)';cx.lineWidth=1.2;cx.stroke();
+    cx.beginPath();cx.moveTo(palmX+palmW+14*sc,palmY+22*sc);cx.bezierCurveTo(palmX+palmW+32*sc,palmY+40*sc,palmX+palmW+32*sc,palmY+palmH-40*sc,palmX+palmW+14*sc,palmY+palmH-22*sc);cx.strokeStyle='rgba(150,60,40,0.18)';cx.lineWidth=2.5;cx.stroke();
+    cx.restore();
+    const preCurl=.22;
+    [{yo:palmY+14*sc,len:68*sc,spread:-.18,w:11.5*sc},{yo:palmY+36*sc,len:74*sc,spread:-.06,w:12.5*sc},{yo:palmY+58*sc,len:70*sc,spread:.06,w:11.5*sc},{yo:palmY+77*sc,len:57*sc,spread:.18,w:10*sc}].forEach(f=>{
+      const angle=Math.PI+f.spread*(1-s*.4),curl=preCurl+s*(1-preCurl),pts=fingerSpine(palmX+4*sc,f.yo,f.len,angle,curl);
+      drawFingerFromSpine(pts,f.w,makeSkinGrd(pts[pts.length-1].x,palmX+4*sc));
+    });
+    const tx=BX-38*sc,ty=172*sc+s*5*sc,thumbPts=fingerSpine(tx,ty,44*sc,-0.28+s*.32,.12+s*.45);
+    drawFingerFromSpine(thumbPts,11*sc,makeSkinGrd(tx-20*sc,tx+20*sc));
+  }
+
+  function drawStream(len){
+    if(len<=0)return;
+    const sc=Math.min(W,H)/520;
+    const x=BX, y0=NOZ_B;
+    // stream reaches from nozzle all the way down to fry tops
+    const slots=getFrySlots();
+    const targetY=slots[3].topY; // land on centre fry
+    const fullLen=targetY-y0;
+    const currentLen=Math.min(len/1*fullLen/fullLen, fullLen) * (len/(105*sc));
+    const drawLen=Math.min(len*(fullLen/(105*sc)), fullLen);
+
+    // stream narrows as it falls — wide at nozzle, thin by the time it hits
+    const topW=4*sc, botW=2*sc;
+    const g=cx.createLinearGradient(x,y0,x,y0+drawLen);
+    g.addColorStop(0,'#c0392b');g.addColorStop(.5,'#e74c3c');g.addColorStop(1,'#c0392b');
+    cx.beginPath();
+    cx.moveTo(x-topW, y0);
+    // slight wobble curve
+    cx.bezierCurveTo(x-topW+1, y0+drawLen*.3, x+botW+1, y0+drawLen*.7, x-botW*0.5, y0+drawLen);
+    cx.bezierCurveTo(x+botW+2, y0+drawLen*.7, x+topW-1, y0+drawLen*.3, x+topW, y0);
+    cx.closePath();cx.fillStyle=g;cx.fill();
+
+    // splat/drip at the tip only when stream is long enough to hit fries
+    if(drawLen>fullLen*0.7){
+      const alpha=Math.min((drawLen-fullLen*0.7)/(fullLen*0.3),1);
+      const splatR=(3+alpha*5)*sc;
+      cx.beginPath();cx.arc(x-botW*0.5, y0+drawLen, splatR, 0, Math.PI*2);
+      cx.fillStyle=`rgba(192,57,43,${alpha*0.85})`;cx.fill();
+    }
+  }
+
+  function drawKetchupOnFries(){
+    const slots=getFrySlots();
+    const sc=Math.min(W,H)/520;
+    const fryWidths=[14,15,16,16,16,15,14].map(v=>v*sc);
+
+    slots.forEach((slot,i)=>{
+      const vol=fryKetchup[i];
+      if(vol<=0) return;
+      const fw=fryWidths[i];
+
+      // Pool sitting on top of fry - a squashed ellipse that widens with volume
+      const poolW = fw * (0.6 + vol*0.7);
+      const poolH = fw * (0.22 + vol*0.18);
+      cx.save();
+      cx.translate(slot.x, slot.topY);
+      cx.rotate(slot.a);
+      // drop shadow under pool
+      cx.beginPath();cx.ellipse(1,2,poolW,poolH*0.6,0,0,Math.PI*2);
+      cx.fillStyle='rgba(80,0,0,0.15)';cx.fill();
+      // main pool
+      const pg=cx.createRadialGradient(0,-poolH*.2,0,0,0,poolW);
+      pg.addColorStop(0,'#e84c3c');pg.addColorStop(.6,'#c0392b');pg.addColorStop(1,'rgba(140,20,10,0.8)');
+      cx.beginPath();cx.ellipse(0,0,poolW,poolH,0,0,Math.PI*2);
+      cx.fillStyle=pg;cx.fill();
+      // sheen
+      cx.beginPath();cx.ellipse(-poolW*.2,-poolH*.3,poolW*.3,poolH*.35,-.3,0,Math.PI*2);
+      cx.fillStyle='rgba(255,255,255,0.18)';cx.fill();
+      cx.restore();
+
+      // Draw drip trails running down this fry
+      FRY_DRIPS[i].forEach(d=>{
+        if(d.pts.length<2) return;
+        cx.save();cx.lineCap='round';cx.lineJoin='round';
+        // Draw as a single tapered path
+        for(let j=1;j<d.pts.length;j++){
+          const t=j/(d.pts.length-1);
+          const w=d.w*(0.4+t*0.6); // thicker near head
+          cx.beginPath();
+          cx.moveTo(d.pts[j-1].x, d.pts[j-1].y);
+          cx.lineTo(d.pts[j].x,   d.pts[j].y);
+          cx.strokeStyle=`rgba(180,35,20,${0.55+t*0.35})`;
+          cx.lineWidth=w;cx.stroke();
+        }
+        // bulging head at tip
+        const tip=d.pts[d.pts.length-1];
+        cx.beginPath();cx.arc(tip.x,tip.y,d.w*0.75,0,Math.PI*2);
+        cx.fillStyle='rgba(192,40,25,0.92)';cx.fill();
+        cx.restore();
+      });
+    });
+  }
+
+  function drawFries(){
+    const sc=Math.min(W,H)/520,pcx=W/2,py=H-52*sc;
+    cx.beginPath();cx.ellipse(pcx,py+20*sc,145*sc,15*sc,0,0,Math.PI*2);cx.fillStyle='rgba(0,0,0,0.28)';cx.fill();
+    const plg=cx.createLinearGradient(pcx,py-26*sc,pcx,py+26*sc);plg.addColorStop(0,'#f5f6fa');plg.addColorStop(1,'#dfe6e9');
+    cx.beginPath();cx.ellipse(pcx,py,145*sc,26*sc,0,0,Math.PI*2);cx.fillStyle=plg;cx.fill();
+    cx.beginPath();cx.ellipse(pcx,py-4*sc,137*sc,22*sc,0,0,Math.PI*2);cx.fillStyle='#f9f9f9';cx.strokeStyle='#ddd';cx.lineWidth=1;cx.fill();cx.stroke();
+    [{x:.24,by:py-3*sc,h:90*sc,w:14*sc,a:-.13},{x:.30,by:py-5*sc,h:97*sc,w:15*sc,a:-.05},{x:.37,by:py-7*sc,h:101*sc,w:16*sc,a:.03},{x:.43,by:py-8*sc,h:103*sc,w:16*sc,a:-.02},{x:.50,by:py-7*sc,h:100*sc,w:16*sc,a:.05},{x:.56,by:py-5*sc,h:95*sc,w:15*sc,a:.09},{x:.62,by:py-3*sc,h:87*sc,w:14*sc,a:.14},{x:.27,by:py,h:82*sc,w:13*sc,a:-.08},{x:.33,by:py+1*sc,h:87*sc,w:14*sc,a:.02},{x:.40,by:py,h:90*sc,w:15*sc,a:-.04},{x:.46,by:py,h:91*sc,w:15*sc,a:.03},{x:.53,by:py,h:87*sc,w:14*sc,a:.07},{x:.59,by:py+1*sc,h:82*sc,w:13*sc,a:.12}].forEach(f=>{
+      cx.save();cx.translate(f.x*W,f.by);cx.rotate(f.a);
+      const fg=cx.createLinearGradient(0,-f.h,0,0);fg.addColorStop(0,'#c48a08');fg.addColorStop(.12,'#e8b84b');fg.addColorStop(.85,'#f0c040');fg.addColorStop(1,'#c49a27');
+      rr(cx,-f.w/2,-f.h,f.w,f.h,f.w*.34);cx.fillStyle=fg;cx.fill();cx.strokeStyle='rgba(140,80,0,0.25)';cx.lineWidth=.7;cx.stroke();
+      rr(cx,-f.w/2+1,-f.h,f.w-2,11*sc,[f.w*.34,f.w*.34,1,1]);cx.fillStyle='rgba(110,55,0,0.38)';cx.fill();cx.restore();
+    });
+  }
+
+  function render(){
+    cx.clearRect(0,0,W,H);
+    cx.fillStyle='#1a1a2e';cx.fillRect(0,0,W,H);
+    drawFries();drawKetchupOnFries();drawStream(streamLen);drawBottle(sq);drawHand(sq);
+  }
+
+  let ktLast=performance.now();
+  function ktLoop(ts){
+    if(activeGame!=='ketchup'){requestAnimationFrame(ktLoop);return;}
+    const dt=Math.min((ts-ktLast)/1000,.05); ktLast=ts;
+    const sc=Math.min(W,H)/520;
+    const slots=getFrySlots();
+
+    if(squeezing){
+      sq=Math.min(1,sq+dt*3);
+      // stream grows quickly so it visibly extends toward fries
+      streamLen=Math.min(105*sc,streamLen+dt*320);
+      totalSqueezeTime+=dt;
+
+      // Once stream is long enough to reach, ketchup lands on centre fry
+      const streamProgress=streamLen/(105*sc);
+      if(streamProgress>0.3){
+        const effectiveRate=(streamProgress-0.3)/0.7; // ramp up as stream reaches
+        // pile builds fast on centre fry
+        fryKetchup[3]=Math.min(1,fryKetchup[3]+dt*3.5*effectiveRate);
+        // overflow spreads outward — only when centre has enough
+        if(fryKetchup[3]>0.25){
+          const overflow=fryKetchup[3]-0.2;
+          [2,4].forEach(i=>{ fryKetchup[i]=Math.min(1,fryKetchup[i]+dt*1.8*overflow); });
+        }
+        if(fryKetchup[3]>0.55){
+          const overflow=fryKetchup[3]-0.5;
+          [1,5].forEach(i=>{ fryKetchup[i]=Math.min(1,fryKetchup[i]+dt*1.2*overflow); });
+        }
+        if(fryKetchup[3]>0.8){
+          const overflow=fryKetchup[3]-0.75;
+          [0,6].forEach(i=>{ fryKetchup[i]=Math.min(1,fryKetchup[i]+dt*0.8*overflow); });
+        }
+      }
+      if(sq>=1) squeezing=false;
+    } else if(releasing){
+      sq=Math.max(0,sq-dt*1.8);
+      // stream retracts back up into nozzle
+      streamLen=Math.max(0,streamLen-dt*380);
+      if(sq<=0&&streamLen<=0) releasing=false;
+    }
+
+    // Spawn and advance drips for each fry slot
+    dripTimer-=dt;
+    slots.forEach((slot,i)=>{
+      const vol=fryKetchup[i];
+      if(vol<=0) return;
+      const fw=(14+Math.min(i,NUM_SLOTS-1-i))*sc; // fry width approx
+
+      // Spawn new drip from pool when enough volume
+      if(dripTimer<=0 && vol>0.15 && FRY_DRIPS[i].length<4){
+        // start at the edge of the pool on the fry top, slightly offset
+        const side=(Math.random()>.5?1:-1)*fw*0.3;
+        const startX=slot.x+side+Math.sin(slot.a)*fw*0.3;
+        const startY=slot.topY+Math.cos(slot.a)*fw*0.3;
+        FRY_DRIPS[i].push({
+          pts:[{x:startX,y:startY}],
+          vx: Math.sin(slot.a)*12 + (Math.random()-.5)*4,
+          vy: Math.cos(slot.a)*12 + 6,
+          w: 2.5+vol*2+Math.random()*1.5,
+          life: 0,
+          maxLife: 1.5+Math.random()*1.5,
+        });
+      }
+
+      // Advance existing drips — they flow along the fry surface with gravity
+      for(let j=FRY_DRIPS[i].length-1;j>=0;j--){
+        const d=FRY_DRIPS[i][j];
+        d.life+=dt;
+        // gravity pulls down, fry surface guides direction
+        d.vy+=60*dt;   // gravity
+        d.vx+=Math.sin(slot.a)*20*dt; // surface lean
+        d.vx*=0.97; d.vy*=0.97;      // viscosity
+        const speed=Math.min(Math.sqrt(d.vx*d.vx+d.vy*d.vy),55);
+        const ang=Math.atan2(d.vy,d.vx);
+        const tip=d.pts[d.pts.length-1];
+        const nx=tip.x+Math.cos(ang)*speed*dt;
+        const ny=tip.y+Math.sin(ang)*speed*dt;
+        d.pts.push({x:nx,y:ny});
+        // keep trail to reasonable length
+        if(d.pts.length>30) d.pts.shift();
+        // remove if drip has reached the plate or timed out
+        if(ny>slot.botY+8*sc || d.life>d.maxLife) FRY_DRIPS[i].splice(j,1);
+      }
+    });
+    if(dripTimer<=0) dripTimer=0.12+Math.random()*0.1;
+
+    render();requestAnimationFrame(ktLoop);
+  }
+
+  function startSq(){squeezing=true;releasing=false;document.getElementById('kt-hint').style.opacity='0';}
+  function endSq(){squeezing=false;releasing=true;}
+  cv.addEventListener('mousedown',startSq);cv.addEventListener('mouseup',endSq);cv.addEventListener('mouseleave',endSq);
+  cv.addEventListener('touchstart',e=>{e.preventDefault();startSq();},{passive:false});
+  cv.addEventListener('touchend',e=>{e.preventDefault();endSq();},{passive:false});
+  requestAnimationFrame(ktLoop);
 }
 
-function onDown(px,py){
-  if(ptInBall(px,py)){
-    dragging=true; cursorPressing=true;
-    dragOffX=ball.x-px; dragOffY=ball.y-py;
-    grabT=performance.now();
-    ball.vx=0; ball.vy=0;
-    sqCount++; sqEl.textContent=sqCount;
-    updateMood();
+
+/* ══════════════════════════════════════════════════════════
+   BUBBLE WRAP
+══════════════════════════════════════════════════════════ */
+let bwPopped=0, bwTotal=0;
+
+// ── Bubble pop sound via Web Audio API ──
+let bwAudioCtx=null;
+function getBwAudio(){
+  if(!bwAudioCtx) bwAudioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  return bwAudioCtx;
+}
+function playPop(){
+  try{
+    const ac=getBwAudio();
+    // Tiny burst of noise shaped into a snap
+    const bufLen=ac.sampleRate*0.06;
+    const buf=ac.createBuffer(1,bufLen,ac.sampleRate);
+    const data=buf.getChannelData(0);
+    for(let i=0;i<bufLen;i++){
+      // white noise with fast exponential decay
+      data[i]=(Math.random()*2-1)*Math.pow(1-i/bufLen,6);
+    }
+    const src=ac.createBufferSource();
+    src.buffer=buf;
+
+    // band-pass filter gives it a tight "pop" timbre
+    const bp=ac.createBiquadFilter();
+    bp.type='bandpass';
+    // slight pitch variation so each pop sounds a little different
+    bp.frequency.value=1200+Math.random()*600;
+    bp.Q.value=0.8;
+
+    // small gain so it's satisfying but not jarring
+    const gain=ac.createGain();
+    gain.gain.setValueAtTime(0.55+Math.random()*0.2, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+0.055);
+
+    src.connect(bp); bp.connect(gain); gain.connect(ac.destination);
+    src.start();
+  }catch(e){}
+}
+
+function initBubbles(){
+  bwPopped=0;
+  const grid=document.getElementById('bw-grid');
+  grid.innerHTML='';
+
+  // Fit cols/rows to screen
+  const avW=Math.min(window.innerWidth-80, 600);
+  const avH=window.innerHeight-240;
+  const bSize=48, gap=5;
+  const cols=Math.max(4,Math.floor((avW)/(bSize+gap)));
+  const rows=Math.max(3,Math.floor((avH)/(bSize+gap)));
+  bwTotal=cols*rows;
+  grid.style.gridTemplateColumns=`repeat(${cols},${bSize}px)`;
+
+  document.getElementById('bw-left').textContent=bwTotal;
+  document.getElementById('bw-count').textContent=0;
+  document.getElementById('bw-msg').textContent='pop away 🫧';
+
+  for(let i=0;i<bwTotal;i++){
+    const b=document.createElement('div');
+    b.className='bubble';
+    b.addEventListener('click',()=>popBubble(b));
+    b.addEventListener('touchstart',e=>{e.preventDefault();popBubble(b);},{passive:false});
+    grid.appendChild(b);
   }
 }
 
-function onMove(px,py,ts){
-  prevMouseX=mouseX; prevMouseY=mouseY;
-  mouseX=px; mouseY=py;
-  if(dragging){
-    ball.x=px+dragOffX;
-    ball.y=py+dragOffY;
-  }
+function popBubble(b){
+  if(b.classList.contains('popped'))return;
+  playPop();
+  b.classList.add('popping');
+  b.addEventListener('animationend',()=>{
+    b.classList.remove('popping');
+    b.classList.add('popped');
+  },{once:true});
+  bwPopped++;
+  document.getElementById('bw-count').textContent=bwPopped;
+  document.getElementById('bw-left').textContent=bwTotal-bwPopped;
+  const msgs=['pop away 🫧','nice one','keep going...','halfway there!','almost...','SO CLOSE','all done!! 🎉'];
+  const idx=Math.floor((bwPopped/bwTotal)*6);
+  document.getElementById('bw-msg').textContent = bwPopped===bwTotal ? 'all done!! 🎉 new sheet?' : msgs[Math.min(idx,5)];
 }
 
-function onUp(px,py,ts){
-  if(dragging){
-    // compute throw velocity from recent mouse delta
-    const dt=Math.max((ts-(prevT||ts))/1000,0.008);
-    const vx=(px-prevMouseX)/dt;
-    const vy=(py-prevMouseY)/dt;
-    const speed=Math.sqrt(vx*vx+vy*vy);
-    ball.vx=vx*0.85;
-    ball.vy=vy*0.85;
-    if(speed>200){ throwCount++; thEl.textContent=throwCount; }
-    triggerBounce(Math.min(squeezePower,0.4), Math.atan2(vy,vx));
-    dragging=false; cursorPressing=false;
+function resetBubbles(){ initBubbles(); }
+
+
+/* ══════════════════════════════════════════════════════════
+   SNOW GLOBE
+══════════════════════════════════════════════════════════ */
+function initSnowGlobe(){
+  const wrap  = document.getElementById('sg-wrap');
+  const cv    = document.getElementById('sg-canvas');
+  const hint  = document.getElementById('sg-hint');
+  const ctx   = cv.getContext('2d');
+
+  // size
+  const SIZE  = Math.min(window.innerWidth - 40, window.innerHeight - 200, 480);
+  cv.width = cv.height = SIZE;
+  const CX = SIZE/2, CY = SIZE/2;
+  const GR = SIZE * 0.40;   // globe radius
+  const BR = SIZE * 0.095;  // base half-width fraction
+
+  // snowflakes
+  const N = 160;
+  const flakes = Array.from({length:N}, () => ({
+    x: (Math.random()-0.5)*GR*1.8,
+    y: (Math.random()-0.5)*GR*1.8,
+    r: 1.4 + Math.random()*2.8,
+    vx: 0, vy: 0,
+    mass: 0.4 + Math.random()*0.6,
+    twinkle: Math.random()*Math.PI*2,
+  }));
+
+  let shakeVX=0, shakeVY=0, shaking=false, settleT=0;
+  let lastT = performance.now();
+  let time = 0;
+
+  function shake(){
+    shakeVX = (Math.random()-0.5)*18;
+    shakeVY = -8 - Math.random()*10;
+    flakes.forEach(f=>{
+      f.vx += shakeVX*0.6 + (Math.random()-0.5)*4;
+      f.vy += shakeVY*0.6 + (Math.random()-0.5)*4;
+    });
+    shaking=true; settleT=0;
+    hint.style.opacity='0';
   }
-  prevT=ts;
+
+  wrap.addEventListener('click', shake);
+  wrap.addEventListener('touchstart', e=>{e.preventDefault();shake();},{passive:false});
+
+  function drawGlobe(){
+    // base
+    const baseH = SIZE*0.14;
+    const baseY = CY + GR*0.88;
+
+    // base shadow
+    ctx.beginPath();
+    ctx.ellipse(CX, baseY + baseH*0.85, GR*0.55, SIZE*0.04, 0, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fill();
+
+    // base body
+    const bg = ctx.createLinearGradient(CX-GR*0.5, baseY, CX+GR*0.5, baseY+baseH);
+    bg.addColorStop(0, '#8b6a4a');
+    bg.addColorStop(0.4, '#c49a6a');
+    bg.addColorStop(1, '#6b4a2a');
+    ctx.beginPath();
+    ctx.moveTo(CX - GR*0.48, baseY+baseH*0.15);
+    ctx.bezierCurveTo(CX-GR*0.52, baseY+baseH*0.05, CX-GR*0.48, baseY, CX-GR*0.28, baseY);
+    ctx.lineTo(CX+GR*0.28, baseY);
+    ctx.bezierCurveTo(CX+GR*0.48, baseY, CX+GR*0.52, baseY+baseH*0.05, CX+GR*0.48, baseY+baseH*0.15);
+    ctx.ellipse(CX, baseY+baseH*0.15, GR*0.48, baseH*0.82, 0, 0, Math.PI);
+    ctx.closePath();
+    ctx.fillStyle=bg; ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=1.5; ctx.stroke();
+
+    // wood grain lines
+    ctx.save(); ctx.clip();
+    for(let i=0;i<4;i++){
+      ctx.beginPath();
+      ctx.moveTo(CX - GR*0.4 + i*GR*0.28, baseY);
+      ctx.lineTo(CX - GR*0.38 + i*GR*0.28, baseY+baseH);
+      ctx.strokeStyle='rgba(0,0,0,0.07)'; ctx.lineWidth=1.5; ctx.stroke();
+    }
+    ctx.restore();
+
+    // globe glass sphere
+    const globeGrad = ctx.createRadialGradient(CX-GR*0.25, CY-GR*0.28, GR*0.05, CX, CY, GR);
+    globeGrad.addColorStop(0,   'rgba(210,235,255,0.22)');
+    globeGrad.addColorStop(0.5, 'rgba(140,190,240,0.10)');
+    globeGrad.addColorStop(0.85,'rgba(80,130,200,0.18)');
+    globeGrad.addColorStop(1,   'rgba(40,80,160,0.35)');
+    ctx.beginPath(); ctx.arc(CX, CY, GR, 0, Math.PI*2);
+    ctx.fillStyle = globeGrad; ctx.fill();
+    ctx.strokeStyle = 'rgba(160,200,255,0.4)'; ctx.lineWidth=2; ctx.stroke();
+
+    // scene inside globe — draw with clip
+    ctx.save();
+    ctx.beginPath(); ctx.arc(CX, CY, GR-2, 0, Math.PI*2); ctx.clip();
+
+    // sky gradient inside
+    const sky = ctx.createLinearGradient(CX, CY-GR, CX, CY+GR);
+    sky.addColorStop(0,   '#1a2a50');
+    sky.addColorStop(0.6, '#2a4080');
+    sky.addColorStop(1,   '#1a3060');
+    ctx.fillStyle=sky; ctx.fillRect(CX-GR,CY-GR,GR*2,GR*2);
+
+    // snow ground
+    const groundY = CY + GR*0.52;
+    const snowGrd = ctx.createLinearGradient(0,groundY-10,0,groundY+GR*0.5);
+    snowGrd.addColorStop(0,'#e8f4ff');
+    snowGrd.addColorStop(0.3,'#d0e8f8');
+    snowGrd.addColorStop(1,'#b8d4f0');
+    ctx.beginPath();
+    ctx.moveTo(CX-GR,groundY+4);
+    ctx.bezierCurveTo(CX-GR*0.6,groundY-8, CX-GR*0.2,groundY-4, CX,groundY-2);
+    ctx.bezierCurveTo(CX+GR*0.2,groundY, CX+GR*0.6,groundY-6, CX+GR,groundY+4);
+    ctx.lineTo(CX+GR,CY+GR); ctx.lineTo(CX-GR,CY+GR); ctx.closePath();
+    ctx.fillStyle=snowGrd; ctx.fill();
+
+    // little tree
+    function drawTree(tx,ty,sc){
+      // trunk
+      ctx.fillStyle='#5a3a1a';
+      ctx.fillRect(tx-2*sc,ty,4*sc,10*sc);
+      // layers
+      [[0,'#2d5a27'],[6,'#3a7a32'],[12,'#4a9a40']].forEach(([yo,col],i)=>{
+        ctx.beginPath();
+        ctx.moveTo(tx,ty-yo*sc-18*sc*(i+1)*0.35);
+        ctx.lineTo(tx-(10+i*4)*sc, ty-yo*sc);
+        ctx.lineTo(tx+(10+i*4)*sc, ty-yo*sc);
+        ctx.closePath(); ctx.fillStyle=col; ctx.fill();
+      });
+      // snow on branches
+      [[0,6],[6,4],[12,3]].forEach(([yo,w],i)=>{
+        ctx.beginPath();
+        ctx.moveTo(tx,ty-yo*sc-18*sc*(i+1)*0.35);
+        ctx.lineTo(tx-w*sc, ty-yo*sc);
+        ctx.lineTo(tx+w*sc, ty-yo*sc);
+        ctx.closePath(); ctx.fillStyle='rgba(220,240,255,0.7)'; ctx.fill();
+      });
+    }
+    drawTree(CX-GR*0.28, groundY-2, SIZE/420);
+    drawTree(CX+GR*0.22, groundY-2, SIZE/380);
+    drawTree(CX,         groundY-2, SIZE/320);
+
+    // snowflakes
+    flakes.forEach(f=>{
+      f.twinkle += 0.03;
+      const alpha = 0.6 + Math.sin(f.twinkle)*0.35;
+      ctx.beginPath();
+      ctx.arc(CX+f.x, CY+f.y, f.r, 0, Math.PI*2);
+      ctx.fillStyle=`rgba(220,240,255,${alpha})`;
+      ctx.fill();
+    });
+
+    ctx.restore();
+
+    // glass highlight overlay
+    const hl = ctx.createRadialGradient(CX-GR*0.38, CY-GR*0.42, 0, CX-GR*0.2, CY-GR*0.2, GR*0.55);
+    hl.addColorStop(0,'rgba(255,255,255,0.28)');
+    hl.addColorStop(0.5,'rgba(255,255,255,0.06)');
+    hl.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.beginPath(); ctx.arc(CX,CY,GR,0,Math.PI*2);
+    ctx.fillStyle=hl; ctx.fill();
+
+    // small bottom reflection
+    ctx.beginPath();
+    ctx.ellipse(CX+GR*0.3, CY+GR*0.55, GR*0.12, GR*0.05, -0.5, 0, Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.fill();
+  }
+
+  function sgLoop(ts){
+    if(activeGame!=='snowglobe'){requestAnimationFrame(sgLoop);return;}
+    const dt = Math.min((ts-lastT)/1000, 0.05); lastT=ts; time+=dt;
+
+    // physics
+    flakes.forEach(f=>{
+      // gentle constant drift when settling
+      f.vy += (2.5 + f.mass*1.5) * dt;   // gravity
+      f.vx += (Math.sin(time*0.8+f.twinkle)*0.4)*dt; // gentle sway
+      f.vx *= 0.985; f.vy *= 0.985;       // drag
+
+      f.x += f.vx; f.y += f.vy;
+
+      // keep inside globe sphere
+      const dist = Math.sqrt(f.x*f.x + f.y*f.y);
+      const maxR = GR - f.r - 2;
+      if(dist > maxR){
+        const nx=f.x/dist, ny=f.y/dist;
+        f.x = nx*maxR; f.y = ny*maxR;
+        // bounce off wall softly
+        const dot = f.vx*nx + f.vy*ny;
+        f.vx -= 1.6*dot*nx; f.vy -= 1.6*dot*ny;
+        f.vx *= 0.4; f.vy *= 0.4;
+      }
+
+      // settle on ground (globe-relative ~y=GR*0.5)
+      const groundR = GR*0.52;
+      if(f.y > groundR - f.r){
+        f.y = groundR - f.r;
+        f.vy *= -0.12;
+        f.vx *= 0.7;
+      }
+    });
+
+    ctx.clearRect(0,0,SIZE,SIZE);
+    drawGlobe();
+    requestAnimationFrame(sgLoop);
+  }
+
+  requestAnimationFrame(sgLoop);
 }
 
-// Mouse
-cv.addEventListener('mousedown', e=>{ onDown(e.clientX,e.clientY); });
-window.addEventListener('mousemove', e=>{ prevT=performance.now(); onMove(e.clientX,e.clientY,performance.now()); });
-window.addEventListener('mouseup',   e=>onUp(e.clientX,e.clientY,performance.now()));
 
-// Touch
-cv.addEventListener('touchstart', e=>{
-  e.preventDefault();
-  const t=e.touches[0];
-  onDown(t.clientX,t.clientY);
-},{passive:false});
-window.addEventListener('touchmove', e=>{
-  e.preventDefault();
-  const t=e.touches[0];
-  onMove(t.clientX,t.clientY,performance.now());
-},{passive:false});
-window.addEventListener('touchend', e=>{
-  const t=e.changedTouches[0];
-  onUp(t.clientX,t.clientY,performance.now());
-});
-
-requestAnimationFrame(loop);
 </script>
 </body>
 </html>
