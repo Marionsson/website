@@ -86,14 +86,6 @@ body {
 }
 .divider span { font-size:1rem; opacity:0.4; }
 
-/* Game cards */
-.cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 28px;
-  justify-content: center;
-  max-width: 960px;
-}
 
 .card {
   background: white;
@@ -487,6 +479,105 @@ body {
   text-transform: uppercase;
   font-family:'Nunito',sans-serif;
 }
+
+/* ════════════════════════════════
+   MARBLE RUN
+════════════════════════════════ */
+#mb-wrap {
+  width:100%; height:100%; display:flex; flex-direction:column;
+  align-items:center; background:#1a1020; padding-top:56px; box-sizing:border-box;
+}
+#mb-canvas { display:block; touch-action:none; width:100%; min-height:0; flex:1 1 0; }
+#mb-ui {
+  display:flex; gap:10px; padding:8px 16px 10px; flex-shrink:0; flex-wrap:wrap; justify-content:center;
+}
+.mb-btn {
+  background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,255,255,0.15);
+  border-radius:14px; padding:6px 16px; font-family:'Nunito',sans-serif;
+  font-size:0.75rem; font-weight:800; color:rgba(255,255,255,0.5);
+  cursor:pointer; transition:background 0.15s;
+}
+.mb-btn:hover { background:rgba(255,255,255,0.18); color:rgba(255,255,255,0.9); }
+#mb-hint {
+  font-family:'Nunito',sans-serif; font-size:0.68rem; font-weight:800;
+  color:rgba(255,255,255,0.15); letter-spacing:0.8px; padding:2px 0 8px;
+  text-align:center; flex-shrink:0;
+}
+
+
+/* ════════════════════════════════
+   LOBBY 4×2 GRID
+════════════════════════════════ */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(4, 280px);
+  gap: 28px;
+  justify-content: center;
+  max-width: 1240px;
+}
+@media (max-width: 1200px) {
+  .cards { grid-template-columns: repeat(2, 280px); }
+}
+@media (max-width: 640px) {
+  .cards { grid-template-columns: 1fr; max-width: 340px; }
+}
+
+/* ════════════════════════════════
+   MARBLE RUN  (distinct visuals)
+════════════════════════════════ */
+.card-preview.marble-bg {
+  background: linear-gradient(135deg, #f0ece0 0%, #d4c9b0 100%);
+}
+.tag-marble { background:#e8e0cc; color:#7a6a3a; }
+
+/* ════════════════════════════════
+   PLANT GAME
+════════════════════════════════ */
+#plant-wrap {
+  width:100%; height:100%; display:flex; flex-direction:column;
+  align-items:center; justify-content:flex-start;
+  background: linear-gradient(180deg, #e8f5e9 0%, #c8e6c9 100%);
+  padding-top:56px; box-sizing:border-box; overflow:hidden;
+  user-select:none;
+}
+#plant-canvas { display:block; flex:1; width:100%; touch-action:none; cursor:none; }
+#plant-footer {
+  display:flex; align-items:center; gap:16px;
+  padding:10px 20px 14px; flex-shrink:0;
+}
+#plant-water-btn {
+  background: linear-gradient(135deg,#4fc3f7,#0288d1);
+  border:none; border-radius:20px; padding:9px 24px;
+  font-family:'Nunito',sans-serif; font-size:0.85rem; font-weight:800;
+  color:white; cursor:pointer; box-shadow:0 4px 14px rgba(2,136,209,0.3);
+  transition:transform 0.15s, box-shadow 0.15s;
+}
+#plant-water-btn:hover { transform:scale(1.06); box-shadow:0 6px 18px rgba(2,136,209,0.4); }
+#plant-water-btn:active { transform:scale(0.96); }
+#plant-stage-label {
+  font-family:'Playfair Display',serif; font-size:0.95rem; font-weight:700;
+  color:#2e7d32; letter-spacing:0.5px;
+}
+#plant-water-bar-wrap {
+  display:flex; align-items:center; gap:8px;
+}
+#plant-water-bar-bg {
+  width:80px; height:7px; border-radius:4px; background:rgba(0,0,0,0.12);
+  overflow:hidden;
+}
+#plant-water-bar {
+  height:100%; border-radius:4px; background:linear-gradient(90deg,#4fc3f7,#0288d1);
+  width:0%; transition:width 0.3s;
+}
+#plant-hint {
+  font-family:'Nunito',sans-serif; font-size:0.72rem; font-weight:800;
+  color:rgba(46,125,50,0.5); letter-spacing:1px; text-align:center;
+  padding:0 0 6px;
+}
+.card-preview.plant-bg {
+  background: linear-gradient(135deg,#e8f5e9 0%,#a5d6a7 60%,#66bb6a 100%);
+}
+.tag-plant { background:#e8f5e9; color:#2e7d32; }
 </style>
 </head>
 <body>
@@ -498,7 +589,7 @@ body {
   <div class="lobby-header">
     <div class="eyebrow">✦ a quiet little place ✦</div>
     <h1>Marionsson's<br><em>Stress Relief Corner</em></h1>
-    <p>Six tiny games. No goals, no scores that matter. Just take a breath and play.</p>
+    <p>Eight tiny games. No goals, no scores that matter. Just take a breath and play.</p>
   </div>
 
   <div class="divider"><span>❧</span></div>
@@ -575,6 +666,36 @@ body {
         <div>
           <span class="card-tag tag-pizza">build</span>
           <span class="card-tag tag-relax">cozy</span>
+        </div>
+        <div class="play-btn">Play now</div>
+      </div>
+    </div>
+
+    <div class="card" onclick="launchGame('marble')">
+      <div class="card-preview marble-bg">
+        <span class="preview-emoji">⚪</span>
+      </div>
+      <div class="card-body">
+        <h2>Marble Run</h2>
+        <p>Place pegs and watch marbles cascade and bounce. Endlessly watchable.</p>
+        <div>
+          <span class="card-tag tag-marble">physics</span>
+          <span class="card-tag tag-relax">zen</span>
+        </div>
+        <div class="play-btn">Play now</div>
+      </div>
+    </div>
+
+    <div class="card" onclick="launchGame('plant')">
+      <div class="card-preview plant-bg">
+        <span class="preview-emoji">🌱</span>
+      </div>
+      <div class="card-body">
+        <h2>Grow a Tree</h2>
+        <p>Water your seedling and watch it grow into a blooming tree. Be patient. Be gentle.</p>
+        <div>
+          <span class="card-tag tag-plant">grow</span>
+          <span class="card-tag tag-relax">peaceful</span>
         </div>
         <div class="play-btn">Play now</div>
       </div>
@@ -669,6 +790,7 @@ body {
       <canvas id="pt-canvas"></canvas>
       <div id="pt-footer">
         <button id="pt-clear" onclick="clearPaint()">clear canvas</button>
+        <button id="pt-save" onclick="savePaint()" style="background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.18);border-radius:16px;padding:7px 20px;font-family:'Nunito',sans-serif;font-size:0.78rem;font-weight:800;color:rgba(255,255,255,0.5);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.18)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">save image</button>
         <div id="pt-hint-text">pick a color · click to drop · drag to swirl</div>
       </div>
     </div>
@@ -679,6 +801,34 @@ body {
     <div id="sg-wrap" id="sg-clickzone">
       <canvas id="sg-canvas"></canvas>
       <div id="sg-hint">click to shake ❄️</div>
+    </div>
+  </div>
+
+  <!-- Plant Game -->
+  <div class="game-wrap" id="wrap-plant">
+    <div id="plant-wrap">
+      <canvas id="plant-canvas"></canvas>
+      <div id="plant-footer">
+        <button id="plant-water-btn">💧 Water</button>
+        <div id="plant-water-bar-wrap">
+          <div id="plant-water-bar-bg"><div id="plant-water-bar"></div></div>
+        </div>
+        <span id="plant-stage-label">Seedling</span>
+      </div>
+      <div id="plant-hint">click or hold to water · watch it grow 🌱</div>
+    </div>
+  </div>
+
+  <!-- Marble Run -->
+  <div class="game-wrap" id="wrap-marble">
+    <div id="mb-wrap">
+      <canvas id="mb-canvas"></canvas>
+      <div id="mb-ui">
+        <button class="mb-btn" id="mb-add">+ marble</button>
+        <button class="mb-btn" id="mb-clear-pegs">clear pegs</button>
+        <button class="mb-btn" id="mb-reset-pegs">reset pegs</button>
+      </div>
+      <div id="mb-hint">click canvas to add/remove pegs · marbles fall from top</div>
     </div>
   </div>
 
@@ -697,6 +847,8 @@ let ktStarted    = false;
 let sgStarted    = false;
 let pzStarted    = false;
 let chStarted    = false;
+let plStarted    = false;
+let mbStarted    = false;
 
 function launchGame(id){
   lobby.classList.add('hiding');
@@ -710,7 +862,9 @@ function launchGame(id){
       id==='ketchup'    ? 'Frog & Flies'  :
       id==='bubbles'    ? 'Bubble Wrap'  :
       id==='snowglobe'  ? 'Snow Globe'   :
-      id==='pizza'       ? 'Pizza Builder' : 'Paint Mixer';
+      id==='pizza'      ? 'Pizza Builder' :
+      id==='paintmix'   ? 'Paint Mixer' :
+      id==='plant'      ? 'Grow a Tree' : 'Marble Run';
     activeGame = id;
     if(id==='stressball' && !sbStarted){ initStressBall(); sbStarted=true; }
     if(id==='ketchup'    && !ktStarted){ initKetchup();    ktStarted=true; }
@@ -718,15 +872,18 @@ function launchGame(id){
     if(id==='snowglobe'  && !sgStarted){ initSnowGlobe();  sgStarted=true; }
     if(id==='pizza'      && !pzStarted){ initPizza();      pzStarted=true; }
     if(id==='paintmix'   && !chStarted){ initPaintMix();   chStarted=true; }
+    if(id==='plant'      && !plStarted){ initPlant();      plStarted=true; }
+    if(id==='marble'     && !mbStarted){ initMarble();     mbStarted=true; }
   }, 320);
 }
 
 function goBack(){
+  activeGame = null;  // immediately stops all game loops and sound guards
   gameScreen.classList.remove('visible');
   lobby.style.display='flex';
   setTimeout(()=>lobby.classList.remove('hiding'), 10);
-  // restore cursor
   document.body.style.cursor = '';
+  if(window._pzAC){ try{ window._pzAC.close(); }catch(e){} window._pzAC=null; }
 }
 
 
@@ -861,77 +1018,138 @@ function initStressBall(){
    KETCHUP FRIES
 ══════════════════════════════════════════════════════════ */
 function initKetchup(){
-  const cv  = document.getElementById('kt-canvas');
-  const cx  = cv.getContext('2d');
+  const cv    = document.getElementById('kt-canvas');
+  const cx    = cv.getContext('2d');
   const hint  = document.getElementById('kt-hint');
   const scoreEl = document.getElementById('kt-score');
   let W, H;
   function resize(){ W=cv.width=cv.offsetWidth; H=cv.height=cv.offsetHeight; }
   resize(); window.addEventListener('resize', resize);
-
   function sc(){ return Math.min(W,H)/520; }
+
+  // ── Time-of-day phases ──
+  // phase 0=day, 1=dusk, 2=night, 3=dawn (then loops back to day)
+  const PHASE_THRESHOLDS = [0, 20, 40, 60];  // score thresholds
+  let currentPhase = 0;
+  let phaseT = 0;       // 0..1 blend toward next phase
+  let phaseBlending = false;
+
+  function getPhase(score){
+    if(score>=60) return 3;
+    if(score>=40) return 2;
+    if(score>=20) return 1;
+    return 0;
+  }
+
+  // Sky colours per phase [top, bottom]
+  const SKY_COLS = [
+    ['#87ceeb','#b8e4f8'],          // day
+    ['#ff7e5f','#feb47b'],          // dusk
+    ['#0d1830','#1a2a50'],          // night
+    ['#ffd0a0','#ffe8c8'],          // dawn
+  ];
+  const WATER_COLS = [
+    ['#2a7a5a','#1a4a38'],          // day
+    ['#7a3a2a','#4a2018'],          // dusk
+    ['#0a1828','#050e18'],          // night
+    ['#4a6a8a','#2a4a6a'],          // dawn
+  ];
 
   // ── State ──
   let score=0, combo=0, comboTimer=0, comboFlash=0;
   let mouseX=W/2, mouseY=H/2;
-  const bursts = []; // {x,y,vx,vy,r,color,life}
+  const bursts=[];
   function addBurst(x,y,color,n){
     for(let i=0;i<n;i++){
       const a=Math.random()*Math.PI*2, spd=80+Math.random()*220;
       bursts.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
-        r:3+Math.random()*4, color, life:1, decay:0.9+Math.random()*0.8});
+        r:3+Math.random()*4,color,life:1,decay:0.9+Math.random()*0.8});
     }
   }
 
-  // Tongue state
   const BASE_TONGUE_SPEED = 1100;
-  const tongueSpeed = ()=> BASE_TONGUE_SPEED * (1 + Math.min(combo,8)*0.12);
-  const TONGUE_MAX   = ()=> Math.hypot(W,H);
-  let tongue = { active:false, x:0,y:0, tx:0,ty:0, len:0, maxLen:0,
-                 extending:true, hit:false, hitFlyIdx:-1, retractFly:null };
+  const tongueSpeed = ()=> BASE_TONGUE_SPEED*(1+Math.min(combo,8)*0.12);
+  const TONGUE_MAX  = ()=> Math.hypot(W,H);
+  let tongue={active:false,x:0,y:0,tx:0,ty:0,len:0,maxLen:0,
+              extending:true,hit:false,hitFlyIdx:-1,retractFly:null};
 
-  // Frog
   function frogX(){ return W*0.5; }
   function frogY(){ return H*0.72; }
 
-  // Flies
-  const NUM_FLIES = 6;
+  // ── Flies — now typed ──
+  // type: 'fly'|'firefly'|'moth'
+  const MAX_FLIES = 8;
   const flies = [];
-  function spawnFly(i){
-    const margin = 60*sc();
-    // spawn in upper 60% of screen, away from frog
-    let fx, fy;
-    do {
-      fx = margin + Math.random()*(W-margin*2);
-      fy = margin + Math.random()*(H*0.58);
-    } while(Math.hypot(fx-frogX(), fy-frogY()) < 80*sc());
-    flies[i] = {
-      x:fx, y:fy,
-      vx:(Math.random()-0.5)*90,
-      vy:(Math.random()-0.5)*70,
-      phase: Math.random()*Math.PI*2,     // wing flap offset
-      size: sc()*(9+Math.random()*5),
-      wobble: Math.random()*Math.PI*2,
-      alive: true,
-      catchAnim: 0,                        // 0=alive, >0=being eaten
+
+  function flyTypeForPhase(phase){
+    if(phase===2){ // night: mostly fireflies, rare moth
+      const r=Math.random();
+      return r<0.15 ? 'moth' : r<0.85 ? 'firefly' : 'fly';
+    }
+    if(phase===1){ // dusk: mix
+      return Math.random()<0.5 ? 'firefly' : 'fly';
+    }
+    if(phase===3) return Math.random()<0.3 ? 'firefly' : 'fly';
+    return 'fly';
+  }
+
+  function flyCount(phase){
+    return phase===2 ? 5 : phase===1 ? 6 : 6;
+  }
+
+  function spawnFly(i, forcedType){
+    const phase = currentPhase;
+    const type  = forcedType || flyTypeForPhase(phase);
+    const margin=60*sc();
+    let fx,fy;
+    do{
+      fx=margin+Math.random()*(W-margin*2);
+      fy=margin+Math.random()*(H*0.58);
+    } while(Math.hypot(fx-frogX(),fy-frogY())<80*sc());
+
+    const isMoth = type==='moth';
+    flies[i]={
+      x:fx,y:fy,
+      vx:(Math.random()-0.5)*(isMoth?40:90),
+      vy:(Math.random()-0.5)*(isMoth?30:70),
+      phase:Math.random()*Math.PI*2,
+      size:sc()*(isMoth?16 : 9+Math.random()*5),
+      wobble:Math.random()*Math.PI*2,
+      alive:true, catchAnim:0,
+      type,
+      glowPhase:Math.random()*Math.PI*2,  // firefly blink offset
+      points: type==='moth'?5 : type==='firefly'?2 : 1,
+      trail: type==='firefly'||type==='moth' ? [] : null,
     };
   }
-  for(let i=0;i<NUM_FLIES;i++) spawnFly(i);
+  for(let i=0;i<6;i++) spawnFly(i);
 
-  // Ripple effects
-  const ripples = [];
-  function addRipple(x,y){ ripples.push({x,y,r:0,alpha:0.55,maxR:28*sc()}); }
+  // ── Ripples / pops ──
+  const ripples=[];
+  function addRipple(x,y){ ripples.push({x,y,r:0,alpha:0.55}); }
+  const pops=[];
+  function addPop(x,y,text,big=false){ pops.push({x,y,text,life:1,vy:-55,big}); }
 
-  // Floating score pops
-  const pops = [];
-  function addPop(x,y,text){ pops.push({x,y,text,life:1,vy:-55}); }
+  // ── Ambient stars (night) ──
+  const STARS = Array.from({length:60},()=>({
+    x:Math.random(), y:Math.random()*0.55,
+    r:0.5+Math.random()*1.2,
+    phase:Math.random()*Math.PI*2,
+  }));
+
+  // ── Firefly ambient (background glows not attached to flies) ──
+  const ambientFireflies=Array.from({length:12},()=>({
+    x:Math.random()*1, y:Math.random()*0.55,
+    phase:Math.random()*Math.PI*2,
+    speed:0.008+Math.random()*0.012,
+  }));
 
   // ── Input ──
-  cv.addEventListener('mousemove', e=>{
+  cv.addEventListener('mousemove',e=>{
     const r=cv.getBoundingClientRect();
     mouseX=e.clientX-r.left; mouseY=e.clientY-r.top;
   });
-  cv.addEventListener('touchmove', e=>{
+  cv.addEventListener('touchmove',e=>{
     e.preventDefault();
     const r=cv.getBoundingClientRect();
     mouseX=e.touches[0].clientX-r.left; mouseY=e.touches[0].clientY-r.top;
@@ -940,82 +1158,117 @@ function initKetchup(){
   function shootTongue(){
     if(tongue.active) return;
     hint.style.opacity='0';
-    const fx=frogX(), fy=frogY();
-    const dx=mouseX-fx, dy=mouseY-fy;
-    const dist=Math.hypot(dx,dy)||1;
-    const maxLen=Math.min(TONGUE_MAX(), Math.max(dist, 40*sc()));
-    tongue = {
-      active:true,
-      x:fx, y:fy,
-      tx:fx+dx/dist*maxLen,
-      ty:fy+dy/dist*maxLen,
-      dx:dx/dist, dy:dy/dist,
-      len:0, maxLen,
-      extending:true, hit:false, hitFlyIdx:-1, retractFly:null,
-    };
+    const fx=frogX(),fy=frogY();
+    const dx=mouseX-fx,dy=mouseY-fy,dist=Math.hypot(dx,dy)||1;
+    const maxLen=Math.min(TONGUE_MAX(),Math.max(dist,40*sc()));
+    tongue={active:true,x:fx,y:fy,tx:fx+dx/dist*maxLen,ty:fy+dy/dist*maxLen,
+            dx:dx/dist,dy:dy/dist,len:0,maxLen,extending:true,
+            hit:false,hitFlyIdx:-1,retractFly:null};
     addRipple(fx,fy);
   }
+  cv.addEventListener('click',e=>{ if(activeGame==='ketchup') shootTongue(); });
+  cv.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    if(activeGame==='ketchup'){
+      const r=cv.getBoundingClientRect();
+      mouseX=e.touches[0].clientX-r.left; mouseY=e.touches[0].clientY-r.top;
+      shootTongue();
+    }
+  },{passive:false});
 
-  cv.addEventListener('click',    e=>{ if(activeGame==='ketchup') shootTongue(); });
-  cv.addEventListener('touchstart',e=>{ e.preventDefault(); if(activeGame==='ketchup'){
-    const r=cv.getBoundingClientRect();
-    mouseX=e.touches[0].clientX-r.left; mouseY=e.touches[0].clientY-r.top;
-    shootTongue();
-  }},{passive:false});
+  // ── Draw ──
+  function lerpColor(a,b,t){
+    // a,b = '#rrggbb'
+    const ar=parseInt(a.slice(1,3),16),ag=parseInt(a.slice(3,5),16),ab=parseInt(a.slice(5,7),16);
+    const br=parseInt(b.slice(1,3),16),bg=parseInt(b.slice(3,5),16),bb=parseInt(b.slice(5,7),16);
+    const r=Math.round(ar+(br-ar)*t),g=Math.round(ag+(bg-ag)*t),b2=Math.round(ab+(bb-ab)*t);
+    return `rgb(${r},${g},${b2})`;
+  }
+  function phaseColor(colsA, colsB, idx, t){
+    return lerpColor(colsA[idx], colsB[idx], t);
+  }
 
-  // ── Draw helpers ──
+  function drawBg(time){
+    const p=currentPhase, np=(p+1)%4, t=phaseT;
+    const skyTop    = phaseColor(SKY_COLS[p],   SKY_COLS[np],   0, t);
+    const skyBot    = phaseColor(SKY_COLS[p],   SKY_COLS[np],   1, t);
+    const waterTop  = phaseColor(WATER_COLS[p], WATER_COLS[np], 0, t);
+    const waterBot  = phaseColor(WATER_COLS[p], WATER_COLS[np], 1, t);
 
-  // Pond / sky background
-  function drawBg(){
-    // sky
     const sky=cx.createLinearGradient(0,0,0,H*0.55);
-    sky.addColorStop(0,'#87ceeb'); sky.addColorStop(1,'#b8e4f8');
+    sky.addColorStop(0,skyTop); sky.addColorStop(1,skyBot);
     cx.fillStyle=sky; cx.fillRect(0,0,W,H*0.55);
-    // water
+
     const water=cx.createLinearGradient(0,H*0.55,0,H);
-    water.addColorStop(0,'#2a7a5a'); water.addColorStop(1,'#1a4a38');
+    water.addColorStop(0,waterTop); water.addColorStop(1,waterBot);
     cx.fillStyle=water; cx.fillRect(0,H*0.55,W,H*0.45);
-    // water shimmer lines
-    const t=Date.now()/1000;
+
+    // stars (night + dawn)
+    const starAlpha = p===2 ? 0.7+t*0 : p===1 ? t*0.7 : p===3 ? (1-t)*0.7 : 0;
+    if(starAlpha>0.02){
+      STARS.forEach(s=>{
+        const twinkle=0.4+Math.sin(time*2.2+s.phase)*0.4;
+        cx.beginPath(); cx.arc(s.x*W,s.y*H,s.r,0,Math.PI*2);
+        cx.fillStyle=`rgba(255,255,255,${starAlpha*twinkle})`; cx.fill();
+      });
+    }
+
+    // moon (night)
+    const moonAlpha = p===2 ? Math.min(t*3,1) : p===1&&t>0.7 ? (t-0.7)/0.3 : 0;
+    if(moonAlpha>0.02){
+      cx.beginPath(); cx.arc(W*0.78,H*0.12,18*sc(),0,Math.PI*2);
+      cx.fillStyle=`rgba(255,255,220,${moonAlpha*0.9})`; cx.fill();
+      cx.beginPath(); cx.arc(W*0.78+8*sc(),H*0.12-4*sc(),15*sc(),0,Math.PI*2);
+      cx.fillStyle=`rgba(${p===2?'13,24,48':'26,42,80'},${moonAlpha})`; cx.fill();
+    }
+
+    // sun (day + dawn)
+    const sunAlpha = p===0 ? 0.85 : p===3 ? (1-t)*0.85 : p===1&&t<0.3 ? (1-t/0.3)*0.85 : 0;
+    if(sunAlpha>0.02){
+      const sunG=cx.createRadialGradient(W*0.18,H*0.14,2*sc(),W*0.18,H*0.14,22*sc());
+      sunG.addColorStop(0,`rgba(255,240,160,${sunAlpha})`);
+      sunG.addColorStop(1,`rgba(255,200,50,0)`);
+      cx.beginPath(); cx.arc(W*0.18,H*0.14,22*sc(),0,Math.PI*2);
+      cx.fillStyle=sunG; cx.fill();
+    }
+
+    // ambient fireflies (night/dusk bg glow)
+    const afAlpha = p===2 ? 0.35 : p===1 ? t*0.2 : 0;
+    if(afAlpha>0.01){
+      ambientFireflies.forEach(af=>{
+        af.x=(af.x+af.speed)%1;
+        const glow=0.2+Math.sin(time*2.1+af.phase)*0.5;
+        if(glow<0) return;
+        cx.beginPath(); cx.arc(af.x*W,af.y*H,3*sc(),0,Math.PI*2);
+        cx.fillStyle=`rgba(180,255,120,${afAlpha*glow})`; cx.fill();
+      });
+    }
+
+    // water shimmer
     cx.strokeStyle='rgba(255,255,255,0.07)'; cx.lineWidth=1.5;
     for(let i=0;i<8;i++){
-      const wy=H*0.6+i*H*0.05+Math.sin(t*0.7+i)*4*sc();
+      const wy=H*0.6+i*H*0.05+Math.sin(time*0.7+i)*4*sc();
       cx.beginPath(); cx.moveTo(0,wy); cx.lineTo(W,wy); cx.stroke();
     }
-    // horizon line
     cx.strokeStyle='rgba(255,255,255,0.18)'; cx.lineWidth=1.5;
     cx.beginPath(); cx.moveTo(0,H*0.55); cx.lineTo(W,H*0.55); cx.stroke();
   }
 
-  // Lily pad
-  function drawLilyPad(){
-    const s=sc(), fx=frogX(), fy=frogY();
-    const t=Date.now()/1000;
-    const bob=Math.sin(t*0.9)*2*s;
-    const px=fx, py=fy+18*s+bob;
-    const rx=52*s, ry=14*s;
-    // shadow
+  function drawLilyPad(time){
+    const s=sc(),fx=frogX(),fy=frogY();
+    const bob=Math.sin(time*0.9)*2*s;
+    const px=fx,py=fy+18*s+bob,rx=52*s,ry=14*s;
     cx.beginPath(); cx.ellipse(px+2*s,py+3*s,rx,ry,0,0,Math.PI*2);
     cx.fillStyle='rgba(0,0,0,0.15)'; cx.fill();
-    // pad
-    cx.save();
-    cx.beginPath();
-    cx.ellipse(px,py,rx,ry,0,0,Math.PI*2);
-    cx.clip();
+    cx.save(); cx.beginPath(); cx.ellipse(px,py,rx,ry,0,0,Math.PI*2); cx.clip();
     const g=cx.createRadialGradient(px-rx*0.2,py-ry*0.2,0,px,py,rx);
     g.addColorStop(0,'#5aba60'); g.addColorStop(0.6,'#3a9a40'); g.addColorStop(1,'#2a7030');
     cx.fillStyle=g; cx.fill();
-    // notch cut (lily pad characteristic V)
-    cx.beginPath();
-    cx.moveTo(px,py);
-    cx.lineTo(px-6*s,py-ry);
-    cx.lineTo(px+6*s,py-ry);
-    cx.closePath();
+    cx.beginPath(); cx.moveTo(px,py); cx.lineTo(px-6*s,py-ry); cx.lineTo(px+6*s,py-ry); cx.closePath();
     cx.fillStyle='rgba(0,0,0,0.18)'; cx.fill();
     cx.restore();
     cx.strokeStyle='#2a6028'; cx.lineWidth=1.2;
     cx.beginPath(); cx.ellipse(px,py,rx,ry,0,0,Math.PI*2); cx.stroke();
-    // vein lines
     cx.strokeStyle='rgba(0,0,0,0.1)'; cx.lineWidth=0.8;
     for(let i=0;i<6;i++){
       const a=(-Math.PI*0.5)+(i-2.5)*(Math.PI/5);
@@ -1023,154 +1276,169 @@ function initKetchup(){
     }
   }
 
-  // Frog
-  function drawFrog(tongueAngle){
-    const s=sc(), fx=frogX(), fy=frogY();
-    const t=Date.now()/1000;
-    const bob=Math.sin(t*0.9)*2*s;
-    const bx=fx, by=fy+bob;
-    const eyeAngle = tongueAngle; // eyes track aim direction
-
-    // body
+  function drawFrog(tongueAngle, time){
+    const s=sc(),fx=frogX(),fy=frogY();
+    const bob=Math.sin(time*0.9)*2*s;
+    const bx=fx,by=fy+bob;
+    // night glow on frog
+    if(currentPhase===2||phaseT>0.5&&currentPhase===1){
+      const glowAlpha=currentPhase===2?0.18:phaseT*0.1;
+      cx.beginPath(); cx.arc(bx,by,36*s,0,Math.PI*2);
+      cx.fillStyle=`rgba(100,255,100,${glowAlpha})`; cx.fill();
+    }
     const bg=cx.createRadialGradient(bx-4*s,by-6*s,2*s,bx,by,26*s);
     bg.addColorStop(0,'#6eda60'); bg.addColorStop(0.5,'#4ab848'); bg.addColorStop(1,'#2a8830');
     cx.beginPath(); cx.ellipse(bx,by,24*s,20*s,0,0,Math.PI*2);
-    cx.fillStyle=bg; cx.fill();
-    cx.strokeStyle='#228822'; cx.lineWidth=1.2; cx.stroke();
-    // belly
+    cx.fillStyle=bg; cx.fill(); cx.strokeStyle='#228822'; cx.lineWidth=1.2; cx.stroke();
     cx.beginPath(); cx.ellipse(bx,by+5*s,14*s,11*s,0,0,Math.PI*2);
     cx.fillStyle='rgba(200,255,180,0.4)'; cx.fill();
-    // eyes — two bumps on top, rotated toward aim
     [[-10,-16],[10,-16]].forEach(([ex,ey],ei)=>{
-      const eyeX=bx+ex*s, eyeY=by+ey*s;
-      // eyeball
+      const eyeX=bx+ex*s,eyeY=by+ey*s;
       cx.beginPath(); cx.arc(eyeX,eyeY,7*s,0,Math.PI*2);
       cx.fillStyle='#f0f0d0'; cx.fill(); cx.strokeStyle='#228822'; cx.lineWidth=1; cx.stroke();
-      // pupil tracks tongue direction
-      const pa = tongueAngle + (ei===0?-0.25:0.25);
-      const px2=eyeX+Math.cos(pa)*2.5*s, py2=eyeY+Math.sin(pa)*2.5*s;
+      const pa=tongueAngle+(ei===0?-0.25:0.25);
+      const px2=eyeX+Math.cos(pa)*2.5*s,py2=eyeY+Math.sin(pa)*2.5*s;
       cx.beginPath(); cx.arc(px2,py2,3.5*s,0,Math.PI*2);
       cx.fillStyle='#1a1a1a'; cx.fill();
-      // shine
       cx.beginPath(); cx.arc(px2-1.2*s,py2-1.2*s,1.2*s,0,Math.PI*2);
       cx.fillStyle='rgba(255,255,255,0.7)'; cx.fill();
     });
-    // nostrils
     cx.fillStyle='rgba(0,0,0,0.2)';
-    [[-6,0],[6,0]].forEach(([nx,ny])=>{
-      cx.beginPath(); cx.ellipse(bx+nx*s,by+ny*s,2*s,1.5*s,0,0,Math.PI*2); cx.fill();
-    });
-    // mouth smile
+    [[-6,0],[6,0]].forEach(([nx,ny])=>{ cx.beginPath(); cx.ellipse(bx+nx*s,by+ny*s,2*s,1.5*s,0,0,Math.PI*2); cx.fill(); });
     cx.beginPath(); cx.arc(bx,by+4*s,10*s,0.1,Math.PI-0.1);
     cx.strokeStyle='rgba(0,0,0,0.22)'; cx.lineWidth=1.5; cx.stroke();
-    // front feet
     [[-22,12],[22,12]].forEach(([fx2,fy2])=>{
       cx.beginPath(); cx.ellipse(bx+fx2*s,by+fy2*s,7*s,4*s,0.3*(fx2<0?-1:1),0,Math.PI*2);
       cx.fillStyle='#3aa838'; cx.fill(); cx.strokeStyle='#228822'; cx.lineWidth=1; cx.stroke();
     });
   }
 
-  // Tongue
-  function drawTongue(){
+  function drawTongue(time){
     if(!tongue.active) return;
-    const s=sc(), fx=frogX(), fy=frogY();
-    const t=Date.now()/1000;
-    const tipX=fx+tongue.dx*tongue.len;
-    const tipY=fy+tongue.dy*tongue.len;
-    // slight curve — control point perpendicular to direction
-    const mx=(fx+tipX)/2, my=(fy+tipY)/2;
-    const perp={x:-tongue.dy, y:tongue.dx};
-    const sway=Math.sin(t*8)*3*s*(tongue.len/tongue.maxLen);
-    const cpx=mx+perp.x*sway, cpy=my+perp.y*sway;
-
+    const s=sc(),fx=frogX(),fy=frogY();
+    const t2=Date.now()/1000;
+    const tipX=fx+tongue.dx*tongue.len, tipY=fy+tongue.dy*tongue.len;
+    const mx=(fx+tipX)/2,my=(fy+tipY)/2;
+    const perp={x:-tongue.dy,y:tongue.dx};
+    const sway=Math.sin(t2*8)*3*s*(tongue.len/tongue.maxLen);
+    const cpx=mx+perp.x*sway,cpy=my+perp.y*sway;
     cx.save();
-    cx.strokeStyle='#e8406a';
-    cx.lineWidth=7*s*(0.7+tongue.len/tongue.maxLen*0.5);
-    cx.lineCap='round';
-    cx.beginPath(); cx.moveTo(fx,fy);
-    cx.quadraticCurveTo(cpx,cpy,tipX,tipY);
-    cx.stroke();
-    // lighter centre stripe
-    cx.strokeStyle='rgba(255,160,180,0.4)';
-    cx.lineWidth=3*s;
-    cx.beginPath(); cx.moveTo(fx,fy);
-    cx.quadraticCurveTo(cpx,cpy,tipX,tipY);
-    cx.stroke();
-    // sticky tip ball
+    cx.strokeStyle='#e8406a'; cx.lineWidth=7*s*(0.7+tongue.len/tongue.maxLen*0.5); cx.lineCap='round';
+    cx.beginPath(); cx.moveTo(fx,fy); cx.quadraticCurveTo(cpx,cpy,tipX,tipY); cx.stroke();
+    cx.strokeStyle='rgba(255,160,180,0.4)'; cx.lineWidth=3*s;
+    cx.beginPath(); cx.moveTo(fx,fy); cx.quadraticCurveTo(cpx,cpy,tipX,tipY); cx.stroke();
     cx.beginPath(); cx.arc(tipX,tipY,6*s*(tongue.hit?1.3:1),0,Math.PI*2);
     cx.fillStyle='#d42858'; cx.fill();
     cx.restore();
   }
 
-  // Fly
-  function drawFly(f, idx){
-    if(!f.alive && f.catchAnim<=0) return;
-    const s=sc(), t=Date.now()/1000;
-    const alpha = f.alive ? 1 : f.catchAnim;
-    cx.save(); cx.globalAlpha=alpha;
-    cx.translate(f.x, f.y);
-    // wings flap fast
-    const flapAngle = Math.sin(t*22+f.phase)*0.5;
-    cx.save(); cx.rotate(flapAngle);
-    cx.beginPath(); cx.ellipse(-f.size*0.9,-f.size*0.6,f.size*0.85,f.size*0.38,-.4,0,Math.PI*2);
-    cx.fillStyle='rgba(200,235,255,0.72)'; cx.fill();
-    cx.strokeStyle='rgba(80,120,180,0.35)'; cx.lineWidth=0.7; cx.stroke();
-    cx.restore();
-    cx.save(); cx.rotate(-flapAngle);
-    cx.beginPath(); cx.ellipse(f.size*0.9,-f.size*0.6,f.size*0.85,f.size*0.38,.4,0,Math.PI*2);
-    cx.fillStyle='rgba(200,235,255,0.72)'; cx.fill();
-    cx.strokeStyle='rgba(80,120,180,0.35)'; cx.lineWidth=0.7; cx.stroke();
-    cx.restore();
-    // body
-    cx.beginPath(); cx.ellipse(0,0,f.size*0.45,f.size*0.7,0,0,Math.PI*2);
-    cx.fillStyle='#1a1a10'; cx.fill();
-    // abdomen stripes
-    cx.strokeStyle='rgba(80,80,40,0.4)'; cx.lineWidth=0.8;
-    for(let i=-1;i<=1;i++){
-      cx.beginPath(); cx.moveTo(-f.size*0.38,i*f.size*0.22); cx.lineTo(f.size*0.38,i*f.size*0.22); cx.stroke();
+  function drawFly(f, idx, time){
+    if(!f.alive&&f.catchAnim<=0) return;
+    const s=sc();
+    const alpha=f.alive?1:f.catchAnim;
+
+    // draw light trail for firefly / moth
+    if(f.trail&&f.trail.length>1&&f.alive){
+      cx.save();
+      for(let j=1;j<f.trail.length;j++){
+        const ta=j/f.trail.length;
+        cx.beginPath(); cx.moveTo(f.trail[j-1].x,f.trail[j-1].y);
+        cx.lineTo(f.trail[j].x,f.trail[j].y);
+        const col=f.type==='moth'?`rgba(255,220,80,${ta*0.3})`:`rgba(120,255,80,${ta*0.25})`;
+        cx.strokeStyle=col; cx.lineWidth=2*s*ta; cx.stroke();
+      }
+      cx.restore();
     }
-    // head
-    cx.beginPath(); cx.arc(0,-f.size*0.7,f.size*0.38,0,Math.PI*2);
-    cx.fillStyle='#2a2a18'; cx.fill();
-    // compound eyes
-    [{x:-0.3,y:-0.7},{x:0.3,y:-0.7}].forEach(e=>{
-      cx.beginPath(); cx.arc(e.x*f.size,e.y*f.size,f.size*0.22,0,Math.PI*2);
-      cx.fillStyle='#c8402a'; cx.fill();
-    });
+
+    cx.save(); cx.globalAlpha=alpha; cx.translate(f.x,f.y);
+
+    if(f.type==='firefly'||f.type==='moth'){
+      // glow
+      const glow=Math.max(0,Math.sin(time*3+f.glowPhase));
+      const glowCol=f.type==='moth'?`rgba(255,200,60,${glow*0.6})`:`rgba(100,255,80,${glow*0.55})`;
+      const gr=cx.createRadialGradient(0,0,0,0,0,f.size*3);
+      gr.addColorStop(0,glowCol); gr.addColorStop(1,'rgba(0,0,0,0)');
+      cx.beginPath(); cx.arc(0,0,f.size*3,0,Math.PI*2); cx.fillStyle=gr; cx.fill();
+    }
+
+    const flapAngle=Math.sin(time*22+f.phase)*0.5;
+    if(f.type==='moth'){
+      // wide fluffy wings
+      cx.save(); cx.rotate(flapAngle*0.6);
+      cx.beginPath(); cx.ellipse(-f.size*1.2,-f.size*0.5,f.size*1.1,f.size*0.6,-0.3,0,Math.PI*2);
+      cx.fillStyle='rgba(255,220,160,0.75)'; cx.fill();
+      cx.beginPath(); cx.ellipse(-f.size*0.8,f.size*0.3,f.size*0.7,f.size*0.4,-0.5,0,Math.PI*2);
+      cx.fillStyle='rgba(255,200,120,0.55)'; cx.fill();
+      cx.restore();
+      cx.save(); cx.rotate(-flapAngle*0.6);
+      cx.beginPath(); cx.ellipse(f.size*1.2,-f.size*0.5,f.size*1.1,f.size*0.6,0.3,0,Math.PI*2);
+      cx.fillStyle='rgba(255,220,160,0.75)'; cx.fill();
+      cx.beginPath(); cx.ellipse(f.size*0.8,f.size*0.3,f.size*0.7,f.size*0.4,0.5,0,Math.PI*2);
+      cx.fillStyle='rgba(255,200,120,0.55)'; cx.fill();
+      cx.restore();
+      cx.beginPath(); cx.ellipse(0,0,f.size*0.38,f.size*0.7,0,0,Math.PI*2);
+      cx.fillStyle='#4a3010'; cx.fill();
+    } else {
+      // regular fly / firefly
+      cx.save(); cx.rotate(flapAngle);
+      cx.beginPath(); cx.ellipse(-f.size*0.9,-f.size*0.6,f.size*0.85,f.size*0.38,-0.4,0,Math.PI*2);
+      cx.fillStyle=f.type==='firefly'?'rgba(180,255,180,0.65)':'rgba(200,235,255,0.72)'; cx.fill();
+      cx.restore();
+      cx.save(); cx.rotate(-flapAngle);
+      cx.beginPath(); cx.ellipse(f.size*0.9,-f.size*0.6,f.size*0.85,f.size*0.38,0.4,0,Math.PI*2);
+      cx.fillStyle=f.type==='firefly'?'rgba(180,255,180,0.65)':'rgba(200,235,255,0.72)'; cx.fill();
+      cx.restore();
+      cx.beginPath(); cx.ellipse(0,0,f.size*0.45,f.size*0.7,0,0,Math.PI*2);
+      cx.fillStyle=f.type==='firefly'?'#1a2a10':'#1a1a10'; cx.fill();
+      if(f.type==='firefly'){
+        const glow2=Math.max(0,Math.sin(time*3+f.glowPhase));
+        cx.beginPath(); cx.ellipse(0,f.size*0.3,f.size*0.3,f.size*0.28,0,0,Math.PI*2);
+        cx.fillStyle=`rgba(120,255,60,${0.4+glow2*0.5})`; cx.fill();
+      }
+      cx.beginPath(); cx.arc(0,-f.size*0.7,f.size*0.38,0,Math.PI*2);
+      cx.fillStyle='#2a2a18'; cx.fill();
+      [{x:-0.3,y:-0.7},{x:0.3,y:-0.7}].forEach(e=>{
+        cx.beginPath(); cx.arc(e.x*f.size,e.y*f.size,f.size*0.22,0,Math.PI*2);
+        cx.fillStyle=f.type==='firefly'?'#40a020':'#c8402a'; cx.fill();
+      });
+    }
     cx.restore();
   }
 
-  // Ripples
   function drawRipples(dt){
     for(let i=ripples.length-1;i>=0;i--){
       const r=ripples[i];
       r.r+=dt*120*sc(); r.alpha-=dt*1.4;
-      if(r.alpha<=0){ ripples.splice(i,1); continue; }
+      if(r.alpha<=0){ripples.splice(i,1);continue;}
       cx.beginPath(); cx.arc(r.x,r.y,r.r,0,Math.PI*2);
       cx.strokeStyle=`rgba(255,255,255,${r.alpha})`; cx.lineWidth=1.5; cx.stroke();
     }
   }
 
-  // Score pops
   function drawPops(dt){
     for(let i=pops.length-1;i>=0;i--){
       const p=pops[i]; p.life-=dt*1.6; p.y+=p.vy*dt;
-      if(p.life<=0){ pops.splice(i,1); continue; }
+      if(p.life<=0){pops.splice(i,1);continue;}
       cx.save(); cx.globalAlpha=p.life;
-      cx.font=`bold ${Math.max(14,Math.min(W,H)*0.042)}px Nunito,sans-serif`;
-      cx.fillStyle='#ffe066'; cx.textAlign='center';
-      cx.fillText(p.text, p.x, p.y);
+      const fs=p.big?Math.max(18,Math.min(W,H)*0.055):Math.max(14,Math.min(W,H)*0.042);
+      cx.font=`bold ${fs}px Nunito,sans-serif`;
+      cx.fillStyle=p.big?'#ffe066':'#fff';
+      cx.textAlign='center'; cx.textBaseline='middle';
+      cx.fillText(p.text,p.x,p.y);
       cx.restore();
     }
   }
 
-  // Aim crosshair cursor
-  function drawCursor(){
+  function drawCursor(time){
     if(tongue.active) return;
-    const s=sc(), t=Date.now()/1000;
+    const s=sc(),t=time;
     const pulse=0.6+Math.sin(t*4)*0.25;
     cx.save(); cx.globalAlpha=pulse;
-    cx.strokeStyle='rgba(255,80,100,0.85)'; cx.lineWidth=1.5;
+    // colour cursor based on phase
+    const cursorCol = currentPhase===2?'rgba(120,255,120,0.85)':
+                      currentPhase===1?'rgba(255,180,80,0.85)':
+                      currentPhase===3?'rgba(255,200,120,0.85)':'rgba(255,80,100,0.85)';
+    cx.strokeStyle=cursorCol; cx.lineWidth=1.5;
     const r=10*s;
     cx.beginPath(); cx.arc(mouseX,mouseY,r,0,Math.PI*2); cx.stroke();
     cx.beginPath();
@@ -1178,167 +1446,175 @@ function initKetchup(){
     cx.moveTo(mouseX+r*0.5,mouseY); cx.lineTo(mouseX+r*1.6,mouseY);
     cx.moveTo(mouseX,mouseY-r*1.6); cx.lineTo(mouseX,mouseY-r*0.5);
     cx.moveTo(mouseX,mouseY+r*0.5); cx.lineTo(mouseX,mouseY+r*1.6);
-    cx.stroke();
-    cx.restore();
+    cx.stroke(); cx.restore();
   }
 
   function drawBursts(){
     bursts.forEach(b=>{
       cx.save(); cx.globalAlpha=b.life*0.9;
       cx.beginPath(); cx.arc(b.x,b.y,b.r*b.life,0,Math.PI*2);
-      cx.fillStyle=b.color; cx.fill();
-      cx.restore();
+      cx.fillStyle=b.color; cx.fill(); cx.restore();
     });
   }
 
   function drawComboBar(){
     if(combo<2) return;
     const s=sc();
-    const barW=Math.min(W*0.55,200*s);
-    const barH=7*s;
+    const barW=Math.min(W*0.55,200*s), barH=7*s;
     const bx=W*0.5-barW/2, by=H-28*s;
     const fill=Math.min(comboTimer/2.5,1);
-    // background track
     cx.beginPath(); cx.roundRect(bx,by,barW,barH,barH/2);
     cx.fillStyle='rgba(0,0,0,0.35)'; cx.fill();
-    // filled portion — colour shifts with combo level
-    const hue=Math.max(0,60-combo*5); // yellow→orange→red
+    const hue=Math.max(0,60-combo*5);
     cx.beginPath(); cx.roundRect(bx,by,barW*fill,barH,barH/2);
     cx.fillStyle=`hsl(${hue},95%,58%)`; cx.fill();
-    // flash overlay on new catch
     if(comboFlash>0){
       cx.beginPath(); cx.roundRect(bx,by,barW,barH,barH/2);
       cx.fillStyle=`rgba(255,255,255,${comboFlash*0.5})`; cx.fill();
     }
-    // combo label
-    const pulse=combo>=5 ? 1+Math.sin(Date.now()/120)*0.12 : 1;
-    cx.save();
-    cx.translate(W*0.5, by-7*s); cx.scale(pulse,pulse);
+    const pulse=combo>=5?1+Math.sin(Date.now()/120)*0.12:1;
+    cx.save(); cx.translate(W*0.5,by-7*s); cx.scale(pulse,pulse);
     cx.font=`bold ${Math.max(11,13*s)}px Nunito,sans-serif`;
     cx.fillStyle=`hsl(${hue},95%,72%)`; cx.textAlign='center';
-    cx.fillText(`×${combo} combo`, 0, 0);
+    cx.fillText(`×${combo} combo`,0,0);
+    cx.restore();
+  }
+
+  // Phase label overlay (shows briefly when entering new phase)
+  let phaseLabel='', phaseLabelLife=0;
+  const PHASE_LABELS=['','🌅 Dusk falls…','🌙 Night descends…','🌄 Dawn breaks…'];
+
+  function drawPhaseLabel(dt){
+    if(phaseLabelLife<=0) return;
+    phaseLabelLife-=dt;
+    cx.save(); cx.globalAlpha=Math.min(phaseLabelLife,0.8);
+    cx.font=`bold ${Math.max(14,Math.min(W,H)*0.038)}px Playfair Display,serif`;
+    cx.fillStyle='rgba(255,240,200,0.95)'; cx.textAlign='center';
+    cx.fillText(phaseLabel,W*0.5,H*0.22);
     cx.restore();
   }
 
   // ── Main loop ──
-  let ktLast=performance.now();
+  let ktLast=performance.now(), time=0;
   function ktLoop(ts){
-    if(activeGame!=='ketchup'){ requestAnimationFrame(ktLoop); return; }
-    const dt=Math.min((ts-ktLast)/1000,0.05); ktLast=ts;
-    const s=sc(), fx=frogX(), fy=frogY();
+    if(activeGame!=='ketchup'){requestAnimationFrame(ktLoop);return;}
+    const dt=Math.min((ts-ktLast)/1000,0.05); ktLast=ts; time+=dt;
+
+    // ── Phase transition ──
+    const targetPhase=getPhase(score);
+    if(targetPhase!==currentPhase){
+      phaseT=Math.min(phaseT+dt*0.4,1);
+      if(phaseT>=1){ currentPhase=targetPhase; phaseT=0;
+        phaseLabel=PHASE_LABELS[currentPhase]; phaseLabelLife=2.5;
+        // adapt fly pool to new phase
+        for(let i=0;i<flies.length;i++) if(flies[i].alive) spawnFly(i);
+      }
+    } else { phaseT=0; }
 
     // ── Update flies ──
-    const t=Date.now()/1000;
     flies.forEach((f,i)=>{
-      if(!f.alive){
-        if(f.catchAnim>0) f.catchAnim-=dt*3;
-        return;
-      }
-      // erratic wander
-      f.wobble+=dt*(2.5+Math.sin(t+i)*1.2);
-      f.vx+=Math.cos(f.wobble*1.3)*60*dt;
-      f.vy+=Math.sin(f.wobble)*50*dt;
-      // speed cap
+      if(!f.alive){ if(f.catchAnim>0) f.catchAnim-=dt*3; return; }
+      // moth drifts slowly and gracefully
+      const isMoth=f.type==='moth';
+      f.wobble+=dt*(isMoth?1.2:2.5+Math.sin(time+i)*1.2);
+      f.vx+=Math.cos(f.wobble*(isMoth?0.8:1.3))*(isMoth?25:60)*dt;
+      f.vy+=Math.sin(f.wobble)*(isMoth?20:50)*dt;
+      const maxSpd=(isMoth?55:110)*sc()*4;
       const spd=Math.hypot(f.vx,f.vy);
-      const maxSpd=110*s*4;
-      if(spd>maxSpd){ f.vx=f.vx/spd*maxSpd; f.vy=f.vy/spd*maxSpd; }
-      // drift toward upper half, away from frog
+      if(spd>maxSpd){f.vx=f.vx/spd*maxSpd;f.vy=f.vy/spd*maxSpd;}
       f.vy-=Math.max(0,(f.y-H*0.55))*0.4*dt;
-      const dfy=Math.hypot(f.x-fx,f.y-fy);
-      if(dfy<70*s){ f.vx+=(f.x-fx)/dfy*80*dt; f.vy+=(f.y-fy)/dfy*80*dt; }
+      const dfy=Math.hypot(f.x-frogX(),f.y-frogY());
+      if(dfy<70*sc()){f.vx+=(f.x-frogX())/dfy*80*dt;f.vy+=(f.y-frogY())/dfy*80*dt;}
       f.x+=f.vx*dt; f.y+=f.vy*dt;
-      // bounce off walls
-      const m=20*s;
-      if(f.x<m){ f.x=m; f.vx=Math.abs(f.vx)*0.8; }
-      if(f.x>W-m){ f.x=W-m; f.vx=-Math.abs(f.vx)*0.8; }
-      if(f.y<m){ f.y=m; f.vy=Math.abs(f.vy)*0.8; }
-      if(f.y>H*0.58){ f.y=H*0.58; f.vy=-Math.abs(f.vy)*0.8; }
+      const m=20*sc();
+      if(f.x<m){f.x=m;f.vx=Math.abs(f.vx)*0.8;}
+      if(f.x>W-m){f.x=W-m;f.vx=-Math.abs(f.vx)*0.8;}
+      if(f.y<m){f.y=m;f.vy=Math.abs(f.vy)*0.8;}
+      if(f.y>H*0.58){f.y=H*0.58;f.vy=-Math.abs(f.vy)*0.8;}
+      // trail
+      if(f.trail){
+        f.trail.push({x:f.x,y:f.y});
+        if(f.trail.length>18) f.trail.shift();
+      }
     });
 
-    // ── Update tongue ──
-    const tongueAngle=Math.atan2(mouseY-fy,mouseX-fx);
+    // ── Tongue ──
+    const tongueAngle=Math.atan2(mouseY-frogY(),mouseX-frogX());
     if(tongue.active){
       if(tongue.extending){
-        tongue.len=Math.min(tongue.len+tongueSpeed()*s*dt, tongue.maxLen);
-        // check hit
+        tongue.len=Math.min(tongue.len+tongueSpeed()*sc()*dt,tongue.maxLen);
         if(!tongue.hit){
-          const tipX=fx+tongue.dx*tongue.len, tipY=fy+tongue.dy*tongue.len;
+          const tipX=frogX()+tongue.dx*tongue.len,tipY=frogY()+tongue.dy*tongue.len;
           flies.forEach((f,i)=>{
             if(!f.alive) return;
             if(Math.hypot(tipX-f.x,tipY-f.y)<f.size*2.2){
-              tongue.hit=true; tongue.hitFlyIdx=i;
-              tongue.retractFly=f;
+              tongue.hit=true; tongue.hitFlyIdx=i; tongue.retractFly=f;
               f.alive=false; f.catchAnim=1;
             }
           });
         }
         if(tongue.len>=tongue.maxLen) tongue.extending=false;
       } else {
-        tongue.len=Math.max(0,tongue.len-tongueSpeed()*s*dt*1.6);
-        // drag caught fly back with tongue tip
+        tongue.len=Math.max(0,tongue.len-tongueSpeed()*sc()*dt*1.6);
         if(tongue.retractFly){
-          tongue.retractFly.x=fx+tongue.dx*tongue.len;
-          tongue.retractFly.y=fy+tongue.dy*tongue.len;
+          tongue.retractFly.x=frogX()+tongue.dx*tongue.len;
+          tongue.retractFly.y=frogY()+tongue.dy*tongue.len;
         }
         if(tongue.len<=0){
           if(tongue.hit){
-            score++;
-            combo++;
-            comboTimer=2.5;
-            comboFlash=1;
-            const isMilestone = combo===3||combo===5||combo===10||combo%10===0;
-            // pop text — bigger and more dramatic at milestones
+            const caught=flies[tongue.hitFlyIdx];
+            const pts=caught?caught.points:1;
+            score+=pts;
+            combo++; comboTimer=2.5; comboFlash=1;
+            const isMilestone=combo===3||combo===5||combo===10||combo%10===0;
             if(isMilestone){
               const labels={3:'TRIPLE! 🔥',5:'ON FIRE! 🔥🔥',10:'UNSTOPPABLE! 🌟'};
-              const txt = labels[combo] || `×${combo} COMBO!! 🌟`;
-              addPop(W*0.5, H*0.38, txt);
-              // scatter all flies in panic
-              flies.forEach(f=>{ if(f.alive){
-                const a=Math.random()*Math.PI*2;
-                f.vx+=Math.cos(a)*320; f.vy+=Math.sin(a)*260;
-              }});
-              // big burst
-              addBurst(fx, fy, '#ffe066', 22);
-              addBurst(fx, fy, '#ff8c42', 14);
+              addPop(W*0.5,H*0.38,labels[combo]||`×${combo} COMBO!! 🌟`,true);
+              flies.forEach(f=>{if(f.alive){const a=Math.random()*Math.PI*2;f.vx+=Math.cos(a)*320;f.vy+=Math.sin(a)*260;}});
+              addBurst(frogX(),frogY(),'#ffe066',22);
+              addBurst(frogX(),frogY(),'#ff8c42',14);
+            } else if(pts>=5){
+              addPop(frogX(),frogY()-50*sc(),'✨ GOLDEN MOTH! +5 ✨',true);
+              addBurst(frogX(),frogY(),'#ffd700',20);
+            } else if(pts===2){
+              addPop(frogX(),frogY()-44*sc(),`+2 firefly!`);
+              addBurst(frogX(),frogY(),'#80ff60',8);
             } else if(combo>=3){
-              addPop(fx, fy-44*s, `×${combo} 🔥`);
-              addBurst(fx, fy, '#ffe066', 10);
+              addPop(frogX(),frogY()-44*sc(),`×${combo} 🔥`);
+              addBurst(frogX(),frogY(),'#ffe066',10);
             } else {
-              addPop(fx, fy-40*s, '+1');
+              addPop(frogX(),frogY()-40*sc(),'+1');
             }
-            scoreEl.textContent=`🪰 ${score}`;
+            scoreEl.textContent=`${currentPhase===2?'🌙':currentPhase===1?'🌅':currentPhase===3?'🌄':'🪰'} ${score}`;
             spawnFly(tongue.hitFlyIdx);
-            addRipple(fx,fy);
+            addRipple(frogX(),frogY());
           }
           tongue.active=false; tongue.retractFly=null;
         }
       }
     }
 
-    // combo timer decay
-    if(comboTimer>0){ comboTimer-=dt; if(comboTimer<=0){ combo=0; comboFlash=0; } }
+    if(comboTimer>0){comboTimer-=dt;if(comboTimer<=0){combo=0;comboFlash=0;}}
     if(comboFlash>0) comboFlash=Math.max(0,comboFlash-dt*3);
-    // update burst particles
     for(let i=bursts.length-1;i>=0;i--){
-      const b=bursts[i];
-      b.life-=dt*b.decay; if(b.life<=0){ bursts.splice(i,1); continue; }
-      b.x+=b.vx*dt; b.y+=b.vy*dt;
-      b.vx*=0.88; b.vy*=0.88; b.vy+=120*dt;
+      const b=bursts[i]; b.life-=dt*b.decay;
+      if(b.life<=0){bursts.splice(i,1);continue;}
+      b.x+=b.vx*dt;b.y+=b.vy*dt;b.vx*=0.88;b.vy*=0.88;b.vy+=120*dt;
     }
 
     // ── Render ──
     cx.clearRect(0,0,W,H);
-    drawBg();
+    drawBg(time);
     drawRipples(dt);
-    drawLilyPad();
-    drawTongue();
-    flies.forEach((f,i)=>drawFly(f,i));
-    drawFrog(tongue.active ? Math.atan2(tongue.dy,tongue.dx) : tongueAngle);
+    drawLilyPad(time);
+    drawTongue(time);
+    flies.forEach((f,i)=>drawFly(f,i,time));
+    drawFrog(tongue.active?Math.atan2(tongue.dy,tongue.dx):tongueAngle,time);
     drawPops(dt);
     drawBursts();
     drawComboBar();
-    drawCursor();
-
+    drawPhaseLabel(dt);
+    drawCursor(time);
     requestAnimationFrame(ktLoop);
   }
   requestAnimationFrame(ktLoop);
@@ -1821,6 +2097,148 @@ function initSnowGlobe(){
    PIZZA BUILDER
 ══════════════════════════════════════════════════════════ */
 function initPizza(){
+  // ── Pizza Audio ──
+  let pzAC=null;
+  function getPzAC(){
+    if(!pzAC || pzAC.state==='closed'){
+      pzAC=new(window.AudioContext||window.webkitAudioContext)();
+      window._pzAC=pzAC;
+    }
+    return pzAC;
+  }
+
+  // Sauce brush — wet squelchy swoosh
+  // Tomato sauce — slow, heavy, wet smear. Like thick sauce dragged across dough.
+  function playSauce(){
+    if(activeGame!=='pizza') return;
+    try{
+      const ac=getPzAC(); if(ac.state==='suspended') ac.resume();
+      const sr=ac.sampleRate;
+      // Very gentle wet smear — pink noise, soft low-pass, tiny gain
+      const dur=0.18;
+      const buf=ac.createBuffer(1,Math.ceil(sr*dur),sr);
+      const d=buf.getChannelData(0);
+      // pink noise: warmer than white, softer than brown
+      let b0=0,b1=0,b2=0;
+      for(let i=0;i<d.length;i++){
+        const w=Math.random()*2-1;
+        b0=0.99765*b0+w*0.0990460; b1=0.96300*b1+w*0.2965164; b2=0.57000*b2+w*1.0526913;
+        const pos=i/d.length;
+        // very gentle bell envelope — peaks at 40%, completely fades out
+        const env=Math.pow(Math.sin(pos*Math.PI),2.5);
+        d[i]=(b0+b1+b2+w*0.1848)*0.04*env;
+      }
+      const s=ac.createBufferSource(); s.buffer=buf;
+      const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=320;
+      const g=ac.createGain(); g.gain.value=0.12;
+      s.connect(lp); lp.connect(g); g.connect(ac.destination); s.start();
+    }catch(e){}
+  }
+
+  // Cheese — the faintest soft whisper, like light shreds settling
+  function playCheese(){
+    if(activeGame!=='pizza') return;
+    try{
+      const ac=getPzAC(); if(ac.state==='suspended') ac.resume();
+      const sr=ac.sampleRate;
+      const dur=0.09;
+      const buf=ac.createBuffer(1,Math.ceil(sr*dur),sr);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++){
+        const env=Math.pow(1-i/d.length, 2.5); // fast, gentle decay
+        d[i]=(Math.random()*2-1)*env;
+      }
+      const s=ac.createBufferSource(); s.buffer=buf;
+      const bp=ac.createBiquadFilter(); bp.type='bandpass';
+      bp.frequency.value=900+Math.random()*200; bp.Q.value=0.4;
+      const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1400;
+      const g=ac.createGain(); g.gain.value=0.06;
+      s.connect(bp); bp.connect(lp); lp.connect(g); g.connect(ac.destination); s.start();
+    }catch(e){}
+  }
+
+  // Topping place — satisfying soft thud/pop
+  function playTopping(){
+    if(activeGame!=='pizza') return;
+    try{
+      const ac=getPzAC(); if(ac.state==='suspended') ac.resume();
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.type='sine';
+      o.frequency.setValueAtTime(180+Math.random()*80, ac.currentTime);
+      o.frequency.exponentialRampToValueAtTime(80, ac.currentTime+0.09);
+      g.gain.setValueAtTime(0.15, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+0.12);
+      o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime+0.13);
+    }catch(e){}
+  }
+
+  // Slice cut — crisp knife sound
+  function playSlice(){
+    if(activeGame!=='pizza') return;
+    try{
+      const ac=getPzAC(); if(ac.state==='suspended') ac.resume();
+      const sr=ac.sampleRate, dur=0.06;
+      const buf=ac.createBuffer(1,Math.ceil(sr*dur),sr);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,1.5);
+      const src2=ac.createBufferSource(); src2.buffer=buf;
+      const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=2400;
+      const g=ac.createGain();
+      g.gain.setValueAtTime(0.28,ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur+0.02);
+      src2.connect(hp); hp.connect(g); g.connect(ac.destination);
+      src2.start(); src2.stop(ac.currentTime+dur+0.03);
+    }catch(e){}
+  }
+
+  // Oven hum — starts when baking begins, fades out
+  let ovenHumNode=null, ovenHumGain=null;
+  function startOvenHum(){
+    try{
+      const ac=getPzAC(); if(ac.state==='suspended') ac.resume();
+      if(ovenHumNode) return;
+      // layered hum: low drone + subtle buzz
+      const master=ac.createGain(); master.gain.value=0; master.connect(ac.destination);
+      ovenHumGain=master;
+      [[60,0.18,'sawtooth'],[120,0.08,'sine'],[180,0.04,'sine']].forEach(([f,v,t])=>{
+        const o=ac.createOscillator(); o.type=t; o.frequency.value=f;
+        const g=ac.createGain(); g.gain.value=v;
+        const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=400;
+        o.connect(lp); lp.connect(g); g.connect(master); o.start();
+        if(!ovenHumNode) ovenHumNode=o; // keep ref for cleanup
+      });
+      // fade in
+      master.gain.setTargetAtTime(1, ac.currentTime, 0.4);
+    }catch(e){}
+  }
+  function stopOvenHum(){
+    try{
+      if(!ovenHumGain) return;
+      const ac=getPzAC();
+      ovenHumGain.gain.setTargetAtTime(0, ac.currentTime, 0.5);
+      setTimeout(()=>{
+        try{ if(ovenHumNode){ovenHumNode.stop();} }catch(e){}
+        ovenHumNode=null; ovenHumGain=null;
+      }, 2500);
+    }catch(e){}
+  }
+
+  // Ding when bake is done
+  function playOvenDing(){
+    if(activeGame!=='pizza') return;
+    try{
+      const ac=getPzAC();
+      [[880,0],[1108,0.15],[1320,0.3]].forEach(([f,delay])=>{
+        const o=ac.createOscillator(),g=ac.createGain();
+        o.type='sine'; o.frequency.value=f;
+        const t=ac.currentTime+delay;
+        g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.12,t+0.04);
+        g.gain.exponentialRampToValueAtTime(0.001,t+1.0);
+        o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+1.1);
+      });
+    }catch(e){}
+  }
+
   const wrap   = document.getElementById('pz-wrap');
   const cv     = document.getElementById('pz-canvas');
   const topbar = document.getElementById('pz-topbar');
@@ -1955,6 +2373,7 @@ function initPizza(){
       // place item topping at exact cursor position
       if(insidePizza(x, y, t.r)){
         placed.push({ id:t.id, x, y });
+        playTopping();
       }
     }
   });
@@ -1963,6 +2382,8 @@ function initPizza(){
     const {x, y} = posOnCanvas(e);
     mouseX = x; mouseY = y;
     if(!isPainting || baking || sliding) return;
+    if(selectedId==='sauce' && Math.random()<0.12) playSauce();
+    else if(selectedId==='cheese' && Math.random()<0.08) playCheese();
     if(!selectedId) return;
     const t = TOPPINGS.find(t=>t.id===selectedId);
     if(t && t.kind==='brush' && insidePizza(x, y)){
@@ -1988,6 +2409,7 @@ function initPizza(){
     const norm = ((snapped % Math.PI) + Math.PI) % Math.PI;
     if(!slices.some(a => Math.abs(((a%Math.PI)+Math.PI)%Math.PI - norm) < 0.1)){
       slices.push(snapped);
+      playSlice();
       // spawn a little steam puff on cut
       spawnSteam(); spawnSteam();
     }
@@ -2367,7 +2789,7 @@ function initPizza(){
         // oven slides in from right simultaneously as pizza slides right
         ovenX   = OVEN_HIDDEN  + ease*(OVEN_SHOWN  - OVEN_HIDDEN);
         pizzaX  = PCX          + ease*(PIZZA_IN_OVEN_X - PCX);
-        if(prog>=1){ sliding=false; baking=true; bakeT=0; }
+        if(prog>=1){ sliding=false; baking=true; bakeT=0; startOvenHum(); }
       } else {
         // pizza slides back left, oven slides back right
         ovenX   = OVEN_SHOWN   + ease*(OVEN_HIDDEN  - OVEN_SHOWN);
@@ -2382,6 +2804,7 @@ function initPizza(){
       bakeColor = bakeT;
       if(bakeT>=1){
         baking=false; baked=true;
+        stopOvenHum(); playOvenDing();
         // spawn initial steam puffs
         for(let i=0;i<8;i++) spawnSteam();
         setTimeout(()=>{ sliding=true; slideT=0; slideDir=-1; }, 700);
@@ -2695,6 +3118,12 @@ function initPaintMix(){
   window.addEventListener('pointerup',()=>{isDown=false;});
 
   // ── Clear ──
+  window.savePaint=function(){
+    const link=document.createElement('a');
+    link.download='my-painting.png';
+    link.href=offscreen.toDataURL('image/png');
+    link.click();
+  };
   window.clearPaint=function(){
     off.fillStyle='#0a0a14'; off.fillRect(0,0,W,H);
     particles.length=0; sparkles.length=0; drips.length=0; U.fill(0); V.fill(0);
@@ -2766,6 +3195,687 @@ function initPaintMix(){
     requestAnimationFrame(ptLoop);
   }
   requestAnimationFrame(ptLoop);
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   GROW A TREE
+══════════════════════════════════════════════════════════ */
+function initPlant(){
+  const wrap     = document.getElementById('plant-wrap');
+  const cv       = document.getElementById('plant-canvas');
+  const ctx      = cv.getContext('2d');
+  const waterBtn = document.getElementById('plant-water-btn');
+  const stageEl  = document.getElementById('plant-stage-label');
+  const barEl    = document.getElementById('plant-water-bar');
+  const hint     = document.getElementById('plant-hint');
+
+  function resize(){
+    cv.width  = wrap.offsetWidth;
+    cv.height = wrap.offsetHeight
+              - document.getElementById('plant-footer').offsetHeight
+              - document.getElementById('plant-hint').offsetHeight - 56 - 8;
+    if(cv.height < 80) cv.height = 200;
+  }
+  resize(); window.addEventListener('resize',()=>{ resize(); });
+
+  const W = ()=>cv.width, H = ()=>cv.height;
+
+  // ── Water / growth state ──
+  // water: 0..1 current moisture level
+  // growth: 0..1 total growth progress (never goes down)
+  // wiltT: countdown timer when water==0
+  let water    = 0;      // current moisture
+  let growth   = 0;      // cumulative 0..1
+  let wilt     = 0;      // 0..1 wilt amount (increases when dry)
+  let watering = false;  // button held
+  let mouseX   = W()/2, mouseY = H()*0.5;
+
+  // water droplets for visual feedback
+  const drops  = [];
+  // petals / blooms stored permanently once they appear
+  const blooms = [];
+  let bloomsGenerated = false;
+
+  // ── Stages ──
+  // 0: seedling (growth 0–0.15)
+  // 1: sprout   (0.15–0.35)
+  // 2: sapling  (0.35–0.6)
+  // 3: full tree(0.6–0.85)
+  // 4: blooming (0.85–1.0)
+  const STAGE_NAMES  = ['Seedling 🌱','Sprout 🌿','Sapling 🌳','Tree 🌲','Blooming 🌸'];
+  const STAGE_BREAKS = [0, 0.15, 0.35, 0.60, 0.85];
+  function getStage(g){ let s=0; for(let i=0;i<STAGE_BREAKS.length;i++) if(g>=STAGE_BREAKS[i]) s=i; return s; }
+
+  // ── Audio ──
+  let plAC=null;
+  function getAC(){ if(!plAC) plAC=new(window.AudioContext||window.webkitAudioContext)(); return plAC; }
+  function waterDrop(){
+    try{
+      const ac=getAC(); if(ac.state==='suspended') ac.resume();
+      // soft noise burst — like a drop landing on soil/leaves
+      const sr=ac.sampleRate, dur=0.08, buf=ac.createBuffer(1,Math.ceil(sr*dur),sr);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);
+      const src2=ac.createBufferSource(); src2.buffer=buf;
+      // band-pass around 400–900 Hz for a soft thud/drip timbre
+      const bp=ac.createBiquadFilter(); bp.type='bandpass';
+      bp.frequency.value=500+Math.random()*300; bp.Q.value=1.2;
+      // gentle low-pass to remove harshness
+      const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1800;
+      const g=ac.createGain();
+      g.gain.setValueAtTime(0.22,ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur+0.06);
+      src2.connect(bp); bp.connect(lp); lp.connect(g); g.connect(ac.destination);
+      src2.start(); src2.stop(ac.currentTime+dur+0.08);
+    }catch(e){}
+  }
+  function bloomChime(){
+    try{
+      const ac=getAC();
+      // gentle wind-chime: two partials per note, soft attack, long decay
+      [523,659,784,1047].forEach((f,i)=>{
+        [1, 2.756].forEach((ratio,j)=>{
+          const o=ac.createOscillator(),g=ac.createGain();
+          o.type='sine'; o.frequency.value=f*ratio;
+          const t=ac.currentTime+i*0.18;
+          g.gain.setValueAtTime(0,t);
+          g.gain.linearRampToValueAtTime(j===0?0.07:0.025, t+0.08);
+          g.gain.exponentialRampToValueAtTime(0.001,t+1.4);
+          o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+1.5);
+        });
+      });
+    }catch(e){}
+  }
+
+  // ── Fractal tree using L-system style recursive drawing ──
+  // params driven by growth (0..1) and wilt (0..1)
+  function drawTree(g, wilt){
+    const w=W(), h=H();
+    const baseX = w/2;
+    const baseY = h - (h * 0.08); // ground level
+    const stage = getStage(g);
+
+    // tree parameters scale with growth
+    const trunkH  = h * (0.05 + g * 0.38);       // trunk height
+    const trunkW  = Math.max(3, 4 + g * 14);       // trunk width at base
+    const depth   = Math.floor(2 + g * 5);         // branching depth
+    const spread  = 0.55 + g * 0.35;               // branch spread angle
+    const branchLen = trunkH * (0.55 + g * 0.08);  // initial branch length
+    const lenDecay  = 0.62 + g * 0.06;             // branch shortening factor
+    const wiltAng   = wilt * 0.45;                 // drooping from wilt
+
+    // colours evolve with stage
+    const trunkCol = stage < 2 ? '#7daa5a' : '#5a3a1a';
+    const leafCols = [
+      ['#a8d5a2','#7bc47a'],                  // seedling
+      ['#6abf69','#4caf50'],                  // sprout
+      ['#388e3c','#2e7d32'],                  // sapling
+      ['#1b5e20','#2e7d32'],                  // full tree
+      ['#2e7d32','#1b5e20'],                  // blooming — leaves stay green
+    ];
+    const [leafA,leafB] = leafCols[stage];
+
+    // draw pot/soil
+    drawPot(baseX, baseY, g, stage);
+
+    // recursive branch drawer
+    function branch(x, y, angle, len, depth2, width){
+      if(depth2<=0 || len<2) return;
+
+      // add wilt droop as tree gets dry — angle bends toward down (PI/2)
+      const droopedAngle = angle + (angle > 0 ? wiltAng : -wiltAng) * (1-depth2/depth);
+
+      const ex = x + Math.cos(droopedAngle)*len;
+      const ey = y + Math.sin(droopedAngle)*len;
+
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(ex,ey);
+      // colour: trunk is brown, upper branches go greener
+      const branchFrac = 1 - depth2/depth;
+      const r=Math.round(90 - branchFrac*40), gv=Math.round(58+branchFrac*60), b=Math.round(26);
+      if(stage<2) ctx.strokeStyle=`rgb(80,${110+branchFrac*50},60)`;
+      else ctx.strokeStyle=`rgb(${r+30},${gv-20},${b})`;
+      ctx.lineWidth = Math.max(1, width);
+      ctx.lineCap='round'; ctx.stroke();
+
+      if(depth2<=2){
+        // draw leaf cluster at tips
+        const leafR = 6 + len*0.55 + g*8;
+        const lgrad = ctx.createRadialGradient(ex,ey,0,ex,ey,leafR);
+        lgrad.addColorStop(0, leafA+'cc'); lgrad.addColorStop(1, leafB+'44');
+        ctx.beginPath(); ctx.arc(ex,ey,leafR,0,Math.PI*2);
+        ctx.fillStyle=lgrad; ctx.fill();
+      }
+
+      // recurse: two children
+      const childLen = len * lenDecay;
+      const childW   = width * 0.65;
+      branch(ex, ey, droopedAngle - spread*(0.7+Math.random()*0.3), childLen, depth2-1, childW);
+      branch(ex, ey, droopedAngle + spread*(0.7+Math.random()*0.3), childLen, depth2-1, childW);
+      // sometimes a third thinner branch for fullness
+      if(depth2>=3 && g>0.4 && Math.random()<0.4){
+        branch(ex, ey, droopedAngle + (Math.random()-0.5)*spread*0.5, childLen*0.7, depth2-2, childW*0.5);
+      }
+    }
+
+    // trunk
+    ctx.beginPath(); ctx.moveTo(baseX, baseY - 4);
+    ctx.lineTo(baseX, baseY - trunkH);
+    ctx.strokeStyle = trunkCol;
+    ctx.lineWidth = trunkW; ctx.lineCap='round'; ctx.stroke();
+
+    if(stage>=1){
+      // seed the random branches consistently per growth level
+      // (use a stable seed so the tree doesn't flicker every frame)
+      const seed = Math.floor(g*200);
+      Math.seedrng = function(s){ let x=s; return ()=>{ x=(x*16807+0)%2147483647; return (x-1)/2147483646; }; };
+      const rng = Math.seedrng(seed+42);
+      // override random for branches
+      const origRand = Math.random;
+      Math.random = rng;
+      branch(baseX, baseY - trunkH, -Math.PI/2, branchLen, depth, trunkW*0.7);
+      Math.random = origRand;
+    }
+
+    // draw blooms on top
+    if(stage>=4 && blooms.length>0){
+      blooms.forEach(b=>{
+        const bx = baseX + b.offX*(w*0.3), by = (baseY-trunkH) + b.offY*(trunkH*0.7);
+        drawBloom(bx,by,b.size,b.hue,b.petalCount);
+      });
+    }
+  }
+
+  function drawPot(cx2,cy2,g,stage){
+    const w2=Math.max(20, 18+g*28), h2=Math.max(14, 12+g*18);
+    // soil mound
+    const soilG=ctx.createRadialGradient(cx2,cy2,0,cx2,cy2,w2);
+    soilG.addColorStop(0,'#6d4c41'); soilG.addColorStop(1,'#4e342e');
+    ctx.beginPath(); ctx.ellipse(cx2,cy2,w2,h2*0.35,0,0,Math.PI*2);
+    ctx.fillStyle=soilG; ctx.fill();
+    // grass/moss rim
+    if(stage>=1){
+      ctx.beginPath(); ctx.ellipse(cx2,cy2,w2,h2*0.35,0,0,Math.PI);
+      ctx.strokeStyle='#66bb6a'; ctx.lineWidth=3; ctx.stroke();
+    }
+    // pot body (only drawn at early stages — tree dwarfs it later)
+    if(g<0.5){
+      const potW=w2*1.1, potH=h2*1.8;
+      const pg=ctx.createLinearGradient(cx2-potW,cy2,cx2+potW,cy2+potH);
+      pg.addColorStop(0,'#e57373'); pg.addColorStop(0.5,'#ef9a9a'); pg.addColorStop(1,'#c62828');
+      ctx.beginPath();
+      ctx.moveTo(cx2-potW*0.75,cy2); ctx.lineTo(cx2-potW,cy2+potH);
+      ctx.lineTo(cx2+potW,cy2+potH); ctx.lineTo(cx2+potW*0.75,cy2);
+      ctx.closePath(); ctx.fillStyle=pg; ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.lineWidth=1; ctx.stroke();
+    }
+  }
+
+  function drawBloom(x,y,size,hue,petals){
+    for(let i=0;i<petals;i++){
+      const a=(i/petals)*Math.PI*2;
+      const px=x+Math.cos(a)*size*0.6, py=y+Math.sin(a)*size*0.6;
+      ctx.beginPath(); ctx.ellipse(px,py,size*0.45,size*0.28,a,0,Math.PI*2);
+      ctx.fillStyle=`hsl(${hue},80%,80%)`; ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(x,y,size*0.28,0,Math.PI*2);
+    ctx.fillStyle=`hsl(${hue+30},90%,88%)`; ctx.fill();
+  }
+
+  function generateBlooms(){
+    blooms.length=0;
+    const count = 12 + Math.floor(Math.random()*10);
+    for(let i=0;i<count;i++){
+      blooms.push({
+        offX: (Math.random()-0.5)*2,
+        offY: Math.random(),
+        size: 5+Math.random()*9,
+        hue:  300+Math.random()*60,    // pink-purple
+        petalCount: 5+Math.floor(Math.random()*3),
+      });
+    }
+  }
+
+  // ── Water droplet particles ──
+  function spawnDrop(x,y){
+    drops.push({
+      x, y,
+      vx:(Math.random()-0.5)*60,
+      vy:-60-Math.random()*80,
+      r:2+Math.random()*3,
+      life:1, decay:1.4+Math.random()*0.8,
+    });
+  }
+
+  function updateDrawDrops(dt){
+    for(let i=drops.length-1;i>=0;i--){
+      const d=drops[i];
+      d.life-=d.decay*dt; if(d.life<=0){drops.splice(i,1);continue;}
+      d.vy+=280*dt; d.x+=d.vx*dt; d.y+=d.vy*dt;
+      ctx.beginPath(); ctx.arc(d.x,d.y,d.r*d.life,0,Math.PI*2);
+      ctx.fillStyle=`rgba(79,195,247,${d.life*0.7})`; ctx.fill();
+    }
+  }
+
+  // ── Background ──
+  function drawBg(g){
+    const w=W(),h=H();
+    const stage=getStage(g);
+    // sky shifts from light to deeper blue-green as tree matures
+    const skyTop=['#e3f2fd','#e3f2fd','#c8e6c9','#a5d6a7','#81c784'][stage];
+    const skyBot=['#f1f8e9','#e8f5e9','#dcedc8','#c5e1a5','#aed581'][stage];
+    const grad=ctx.createLinearGradient(0,0,0,h);
+    grad.addColorStop(0,skyTop); grad.addColorStop(1,skyBot);
+    ctx.fillStyle=grad; ctx.fillRect(0,0,w,h);
+    // sun
+    const sunAlpha=0.35+stage*0.12;
+    ctx.beginPath(); ctx.arc(w*0.82,h*0.12,22,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,236,64,${sunAlpha})`; ctx.fill();
+    // ground
+    const groundY=h - h*0.08;
+    const gg=ctx.createLinearGradient(0,groundY,0,h);
+    gg.addColorStop(0,'#81c784'); gg.addColorStop(1,'#388e3c');
+    ctx.fillStyle=gg; ctx.fillRect(0,groundY,w,h-groundY+2);
+    // butterflies at bloom stage
+    if(stage>=4){
+      drawButterflies(g);
+    }
+  }
+
+  // simple butterfly sprites
+  const bflies=[
+    {x:0.2,y:0.35,vx:0.06,phase:0},{x:0.7,y:0.25,vx:-0.04,phase:1.5},
+    {x:0.5,y:0.4,vx:0.03,phase:3},
+  ];
+  let bfTime=0;
+  function drawButterflies(g){
+    const w=W(),h=H(),groundY=h-h*0.08;
+    bflies.forEach(b=>{
+      b.x+=b.vx*0.003; if(b.x<0.05||b.x>0.95) b.vx*=-1;
+      const bx=b.x*w, by=b.y*groundY;
+      const flapW=Math.abs(Math.sin(bfTime*4+b.phase))*12+4;
+      ctx.save(); ctx.translate(bx,by);
+      ctx.beginPath(); ctx.ellipse(-flapW/2-2,-4,flapW/2,5,0.3,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,152,0,0.7)'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(flapW/2+2,-4,flapW/2,5,-0.3,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,152,0,0.7)'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0,0,2,5,0,0,Math.PI*2);
+      ctx.fillStyle='#5d4037'; ctx.fill();
+      ctx.restore();
+    });
+  }
+
+  // ── Cursor (watering can pointer) ──
+  function drawCursor(){
+    if(activeGame!=='plant') return;
+    ctx.save(); ctx.translate(mouseX,mouseY);
+    // spout
+    ctx.beginPath(); ctx.moveTo(-8,0); ctx.lineTo(-18,8);
+    ctx.strokeStyle='rgba(2,136,209,0.7)'; ctx.lineWidth=2.5; ctx.lineCap='round'; ctx.stroke();
+    // can body
+    ctx.beginPath(); ctx.roundRect(-4,-10,20,14,4);
+    ctx.fillStyle='rgba(79,195,247,0.55)'; ctx.fill();
+    ctx.strokeStyle='rgba(2,136,209,0.8)'; ctx.lineWidth=1.5; ctx.stroke();
+    // handle arc
+    ctx.beginPath(); ctx.arc(12,-6,7,Math.PI*0.1,Math.PI*1.1);
+    ctx.strokeStyle='rgba(2,136,209,0.7)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── Input ──
+  cv.addEventListener('mousemove',e=>{
+    const r=cv.getBoundingClientRect(); mouseX=e.clientX-r.left; mouseY=e.clientY-r.top;
+  });
+  cv.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    const r=cv.getBoundingClientRect(); mouseX=e.touches[0].clientX-r.left; mouseY=e.touches[0].clientY-r.top;
+  },{passive:false});
+
+  let waterSoundTimer=0;
+  function doWater(dt){
+    water = Math.min(1, water + dt*0.55);
+    const growRate = 0.012 * dt * (0.5 + water*0.8);
+    const prevStage=getStage(growth);
+    growth = Math.min(1, growth + growRate);
+    const newStage=getStage(growth);
+    if(newStage!==prevStage){
+      stageEl.textContent=STAGE_NAMES[newStage];
+      if(newStage===4 && !bloomsGenerated){ generateBlooms(); bloomsGenerated=true; bloomChime(); }
+    }
+    // spawn drop particles near cursor
+    if(Math.random()<0.35) spawnDrop(mouseX+(-4+Math.random()*8), mouseY+10);
+    // water drop sound every ~0.3s
+    waterSoundTimer-=dt;
+    if(waterSoundTimer<=0){ waterDrop(); waterSoundTimer=0.18+Math.random()*0.14; }
+    hint.style.opacity='0';
+  }
+
+  waterBtn.addEventListener('pointerdown', e=>{ watering=true; e.preventDefault(); });
+  window.addEventListener('pointerup', ()=>{ watering=false; });
+  cv.addEventListener('pointerdown', ()=>{ watering=true; });
+
+  // touch
+  waterBtn.addEventListener('touchstart', e=>{ watering=true; e.preventDefault(); },{passive:false});
+  window.addEventListener('touchend', ()=>{ watering=false; });
+
+  // ── Main loop ──
+  let plLast=performance.now(), plTime=0;
+  function plLoop(ts){
+    if(activeGame!=='plant'){ requestAnimationFrame(plLoop); return; }
+    const dt=Math.min((ts-plLast)/1000,0.05); plLast=ts; plTime+=dt; bfTime+=dt;
+
+    // water decay
+    if(watering){
+      doWater(dt);
+    } else {
+      water=Math.max(0, water - dt*0.18);
+    }
+    // wilt: increases slowly when water==0, recovers when watered
+    if(water<0.05){
+      wilt=Math.min(1, wilt+dt*0.06);
+    } else {
+      wilt=Math.max(0, wilt-dt*0.22);
+    }
+
+    // update water bar UI
+    barEl.style.width=(water*100)+'%';
+    stageEl.textContent=STAGE_NAMES[getStage(growth)];
+
+    // ── Draw ──
+    ctx.clearRect(0,0,W(),H());
+    drawBg(growth);
+    drawTree(growth, wilt);
+    updateDrawDrops(dt);
+    drawCursor();
+
+    requestAnimationFrame(plLoop);
+  }
+  requestAnimationFrame(plLoop);
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   MARBLE RUN
+══════════════════════════════════════════════════════════ */
+function initMarble(){
+  const wrap  = document.getElementById('mb-wrap');
+  const cv    = document.getElementById('mb-canvas');
+  const ctx   = cv.getContext('2d');
+  const hint  = document.getElementById('mb-hint');
+
+  function resize(){
+    const ui  = document.getElementById('mb-ui');
+    const hnt = document.getElementById('mb-hint');
+    cv.width  = wrap.offsetWidth;
+    cv.height = wrap.offsetHeight - ui.offsetHeight - hnt.offsetHeight - 56 - 8;
+    if(cv.height < 100) cv.height = wrap.offsetHeight * 0.7;
+  }
+  resize(); window.addEventListener('resize', resize);
+  const W=()=>cv.width, H=()=>cv.height;
+
+  // ── Audio ──
+  let mbAC=null;
+  function getMbAC(){
+    if(!mbAC || mbAC.state==='closed'){
+      mbAC=new(window.AudioContext||window.webkitAudioContext)();
+      window._mbAC=mbAC;
+    }
+    return mbAC;
+  }
+  function pingSound(freq, vol){
+    if(activeGame!=='marble') return;
+    try{
+      const ac=getMbAC(); if(ac.state==='suspended') ac.resume();
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.type='sine'; o.frequency.value=freq;
+      g.gain.setValueAtTime(vol*0.18,ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.22);
+      o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime+0.25);
+    }catch(e){}
+  }
+
+  // ── Pegs ──
+  const PEG_R = 6;
+  let pegs = [];
+
+  function makeDefaultPegs(){
+    pegs=[];
+    const w=W(), h=H();
+    const cols=8, rows=7, xSpacing=w/(cols+1), ySpacing=h*0.75/(rows+1);
+    for(let r=0;r<rows;r++){
+      const offset=(r%2===0)?0:xSpacing*0.5;
+      const count=r%2===0?cols:cols-1;
+      for(let c=0;c<count;c++){
+        pegs.push({
+          x: xSpacing*(c+1)+offset,
+          y: h*0.1 + ySpacing*(r+1),
+          r: PEG_R,
+        });
+      }
+    }
+  }
+  makeDefaultPegs();
+
+  // ── Marbles ──
+  const MARBLE_R = 9;
+  const MARBLE_COLORS=[
+    ['#ff6b6b','#ff2222'],['#ffd93d','#ffaa00'],['#6bcb77','#22aa44'],
+    ['#4d96ff','#1155cc'],['#c77dff','#7b2fff'],['#ff9f43','#e67e22'],
+    ['#48dbfb','#0abde3'],['#ff6b81','#ee5a24'],
+  ];
+  let marbles=[];
+  let colorIdx=0;
+
+  function spawnMarble(){
+    const w=W();
+    const ci=colorIdx%MARBLE_COLORS.length; colorIdx++;
+    marbles.push({
+      x: w*0.15 + Math.random()*w*0.7,
+      y: -MARBLE_R,
+      vx: (Math.random()-0.5)*60,
+      vy: 0,
+      r: MARBLE_R,
+      colors: MARBLE_COLORS[ci],
+      trail: [],
+      bounces: 0,
+    });
+    hint.style.opacity='0';
+  }
+  // Start with 3 marbles
+  setTimeout(()=>{ spawnMarble(); spawnMarble(); spawnMarble(); }, 200);
+
+  document.getElementById('mb-add').addEventListener('click', spawnMarble);
+  document.getElementById('mb-clear-pegs').addEventListener('click', ()=>{ pegs=[]; });
+  document.getElementById('mb-reset-pegs').addEventListener('click', ()=>{ makeDefaultPegs(); });
+
+  // ── Peg add/remove on click ──
+  let placing=false;
+  cv.addEventListener('pointerdown', e=>{
+    placing=true;
+    const r=cv.getBoundingClientRect();
+    handlePegClick(e.clientX-r.left, e.clientY-r.top);
+  });
+  cv.addEventListener('pointermove', e=>{
+    if(!placing) return;
+    const r=cv.getBoundingClientRect();
+    handlePegClick(e.clientX-r.left, e.clientY-r.top, true);
+  });
+  window.addEventListener('pointerup', ()=>{ placing=false; });
+
+  let lastPegPos=null;
+  function handlePegClick(x,y,isDrag=false){
+    // check if clicking existing peg → remove
+    const idx=pegs.findIndex(p=>Math.hypot(p.x-x,p.y-y)<p.r*2.2);
+    if(idx>=0 && !isDrag){ pegs.splice(idx,1); return; }
+    if(idx>=0) return;
+    // check min distance from others
+    if(pegs.some(p=>Math.hypot(p.x-x,p.y-y)<PEG_R*2.8)) return;
+    if(isDrag && lastPegPos && Math.hypot(x-lastPegPos.x,y-lastPegPos.y)<PEG_R*3) return;
+    pegs.push({x,y,r:PEG_R});
+    lastPegPos={x,y};
+  }
+
+  // ── Physics ──
+  const GRAVITY=520;
+  const RESTITUTION=0.58;
+  const FRICTION=0.88;
+
+  function updateMarbles(dt){
+    const w=W(),h=H();
+    for(let i=marbles.length-1;i>=0;i--){
+      const m=marbles[i];
+      // gravity
+      m.vy+=GRAVITY*dt;
+      m.x+=m.vx*dt; m.y+=m.vy*dt;
+
+      // trail
+      m.trail.push({x:m.x,y:m.y});
+      if(m.trail.length>22) m.trail.shift();
+
+      // wall bounce
+      if(m.x-m.r<0){m.x=m.r;m.vx=Math.abs(m.vx)*RESTITUTION;}
+      if(m.x+m.r>w){m.x=w-m.r;m.vx=-Math.abs(m.vx)*RESTITUTION;}
+
+      // floor — recycle
+      if(m.y-m.r>h+20){
+        m.x=w*0.15+Math.random()*w*0.7;
+        m.y=-m.r;
+        m.vx=(Math.random()-0.5)*60;
+        m.vy=0;
+        m.trail=[];
+        continue;
+      }
+
+      // peg collisions
+      for(const p of pegs){
+        const dx=m.x-p.x, dy=m.y-p.y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        const minDist=m.r+p.r;
+        if(dist<minDist&&dist>0.01){
+          // push out
+          const nx=dx/dist, ny=dy/dist;
+          const overlap=minDist-dist;
+          m.x+=nx*overlap; m.y+=ny*overlap;
+          // reflect velocity
+          const dot=m.vx*nx+m.vy*ny;
+          if(dot<0){
+            m.vx=(m.vx-2*dot*nx)*RESTITUTION;
+            m.vy=(m.vy-2*dot*ny)*RESTITUTION;
+            m.vx*=FRICTION;
+            m.bounces++;
+            // pitch varies with speed
+            const spd=Math.hypot(m.vx,m.vy);
+            const freq=200+Math.min(spd,600)*1.2;
+            pingSound(freq, Math.min(spd/400,1)*0.8);
+          }
+        }
+      }
+
+      // marble–marble collisions
+      for(let j=i-1;j>=0;j--){
+        const b=marbles[j];
+        const dx=b.x-m.x, dy=b.y-m.y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        const minD=m.r+b.r;
+        if(dist<minD&&dist>0.01){
+          const nx=dx/dist,ny=dy/dist;
+          const overlap=(minD-dist)*0.5;
+          m.x-=nx*overlap; m.y-=ny*overlap;
+          b.x+=nx*overlap; b.y+=ny*overlap;
+          const dvx=b.vx-m.vx, dvy=b.vy-m.vy;
+          const dot=dvx*nx+dvy*ny;
+          if(dot<0){
+            const imp=dot*0.9;
+            m.vx+=imp*nx; m.vy+=imp*ny;
+            b.vx-=imp*nx; b.vy-=imp*ny;
+            pingSound(300+Math.random()*200,0.4);
+          }
+        }
+      }
+    }
+  }
+
+  // ── Draw ──
+  function drawBg(){
+    const w=W(),h=H();
+    ctx.fillStyle='#1a1020'; ctx.fillRect(0,0,w,h);
+    // subtle grid
+    ctx.strokeStyle='rgba(255,255,255,0.03)'; ctx.lineWidth=1;
+    for(let x=0;x<w;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+    for(let y=0;y<h;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+    // spawn zone indicator
+    ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=1.5; ctx.setLineDash([4,8]);
+    ctx.beginPath(); ctx.moveTo(w*0.15,0); ctx.lineTo(w*0.15,20); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w*0.85,0); ctx.lineTo(w*0.85,20); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawPegs(t){
+    pegs.forEach(p=>{
+      // outer glow
+      const grd=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*2.8);
+      grd.addColorStop(0,'rgba(180,140,255,0.18)');
+      grd.addColorStop(1,'rgba(180,140,255,0)');
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r*2.8,0,Math.PI*2); ctx.fillStyle=grd; ctx.fill();
+      // peg body
+      const pg=ctx.createRadialGradient(p.x-p.r*0.3,p.y-p.r*0.3,0,p.x,p.y,p.r);
+      pg.addColorStop(0,'#e0d0ff'); pg.addColorStop(0.5,'#9970dd'); pg.addColorStop(1,'#5533aa');
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=pg; ctx.fill();
+      // specular
+      ctx.beginPath(); ctx.arc(p.x-p.r*0.28,p.y-p.r*0.32,p.r*0.3,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.fill();
+    });
+  }
+
+  function drawMarbles(){
+    marbles.forEach(m=>{
+      // trail
+      if(m.trail.length>1){
+        for(let i=1;i<m.trail.length;i++){
+          const ta=i/m.trail.length;
+          ctx.beginPath();
+          ctx.moveTo(m.trail[i-1].x,m.trail[i-1].y);
+          ctx.lineTo(m.trail[i].x,m.trail[i].y);
+          ctx.strokeStyle=`rgba(${hexToRgbStr(m.colors[0])},${ta*0.35})`;
+          ctx.lineWidth=m.r*1.2*ta; ctx.lineCap='round'; ctx.stroke();
+        }
+      }
+      // shadow
+      ctx.beginPath(); ctx.ellipse(m.x+2,m.y+3,m.r*0.8,m.r*0.4,0,0,Math.PI*2);
+      ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.fill();
+      // marble body
+      const mg=ctx.createRadialGradient(m.x-m.r*0.35,m.y-m.r*0.35,m.r*0.05,m.x,m.y,m.r);
+      mg.addColorStop(0,'rgba(255,255,255,0.85)');
+      mg.addColorStop(0.2,m.colors[0]);
+      mg.addColorStop(0.7,m.colors[1]);
+      mg.addColorStop(1,'rgba(0,0,0,0.5)');
+      ctx.beginPath(); ctx.arc(m.x,m.y,m.r,0,Math.PI*2);
+      ctx.fillStyle=mg; ctx.fill();
+      // specular glint
+      ctx.beginPath(); ctx.ellipse(m.x-m.r*0.3,m.y-m.r*0.32,m.r*0.22,m.r*0.14,-0.5,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.fill();
+    });
+  }
+
+  function hexToRgbStr(hex){
+    const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+    return `${r},${g},${b}`;
+  }
+
+  // ── Loop ──
+  let mbLast=performance.now(), mbTime=0;
+  function mbLoop(ts){
+    if(activeGame!=='marble'){ requestAnimationFrame(mbLoop); return; }
+    const dt=Math.min((ts-mbLast)/1000,0.05); mbLast=ts; mbTime+=dt;
+    updateMarbles(dt);
+    ctx.clearRect(0,0,W(),H());
+    drawBg();
+    drawPegs(mbTime);
+    drawMarbles();
+    requestAnimationFrame(mbLoop);
+  }
+  requestAnimationFrame(mbLoop);
 }
 
 
