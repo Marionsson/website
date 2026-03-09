@@ -589,7 +589,7 @@ body {
   <div class="lobby-header">
     <div class="eyebrow">✦ a quiet little place ✦</div>
     <h1>Marionsson's<br><em>Stress Relief Corner</em></h1>
-    <p>Eight tiny games. No goals, no scores that matter. Just take a breath and play.</p>
+    <p>Three tiny games. No goals, no scores that matter. Just take a breath and play.</p>
   </div>
 
   <div class="divider"><span>❧</span></div>
@@ -880,6 +880,9 @@ function launchGame(id){
 function goBack(){
   activeGame = null;  // immediately stops all game loops and sound guards
   if(window._ktAC){ try{ window._ktAC.close(); }catch(e){} window._ktAC=null; }
+  // reset ambient state so it restarts cleanly next time
+  // (stopAmbient would reference dead AC, just null the refs)
+  
   gameScreen.classList.remove('visible');
   lobby.style.display='flex';
   setTimeout(()=>lobby.classList.remove('hiding'), 10);
@@ -1026,6 +1029,28 @@ function initKetchup(){
   function getKtAC(){
     if(!ktAC || ktAC.state==='closed'){ ktAC=new(window.AudioContext||window.webkitAudioContext)(); window._ktAC=ktAC; }
     return ktAC;
+  }
+
+  // Dragonfly catch — crunchy higher snap
+  function soundDragonfly(){
+    if(activeGame!=='ketchup') return;
+    try{
+      const ac=getKtAC();
+      // crisp noise burst (wings crunching) + pitched snap
+      const sr=ac.sampleRate, dur=0.05;
+      const buf=ac.createBuffer(1,Math.ceil(sr*dur),sr);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,1.2);
+      const s=ac.createBufferSource(); s.buffer=buf;
+      const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=2200; bp.Q.value=1.2;
+      const g=ac.createGain(); g.gain.value=0.18;
+      s.connect(bp); bp.connect(g); g.connect(ac.destination); s.start();
+      // short pitched snap on top
+      const o=ac.createOscillator(), og=ac.createGain();
+      o.type='triangle'; o.frequency.setValueAtTime(480,ac.currentTime); o.frequency.exponentialRampToValueAtTime(180,ac.currentTime+0.06);
+      og.gain.setValueAtTime(0.10,ac.currentTime); og.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.08);
+      o.connect(og); og.connect(ac.destination); o.start(); o.stop(ac.currentTime+0.09);
+    }catch(e){}
   }
 
   // Tongue shoot — quick elastic twang: fast sine chirp down
@@ -1265,6 +1290,124 @@ function initKetchup(){
   }
   for(let i=0;i<6;i++) spawnFly(i);
 
+  // ── Fish splashes ──
+  const fish = Array.from({length:3},()=>({
+    x: Math.random(),           // 0..1 relative to W
+    dir: Math.random()<0.5?1:-1,
+    speed: 0.018+Math.random()*0.022,
+    y: 0.62+Math.random()*0.18, // relative to H — below water line
+    phase: Math.random()*Math.PI*2,
+    splashT: 0,                 // countdown for splash animation
+    visible: false,
+    nextSplash: 3+Math.random()*8,
+  }));
+
+  // ── Dragonflies (day/dusk only) ──
+  function makeDragonfly(){
+    return {
+      x: Math.random(),
+      y: 0.28+Math.random()*0.18,
+      vx: (Math.random()<0.5?1:-1)*(0.10+Math.random()*0.08),
+      vy: 0,
+      phase: Math.random()*Math.PI*2,
+      wingPhase: Math.random()*Math.PI*2,
+      alive: true,
+      catchAnim: 0,
+      size: 14+Math.random()*6,   // hitbox radius in scene px
+      respawnT: 0,
+    };
+  }
+  const dragonflies = [makeDragonfly(), makeDragonfly()];
+
+  // ── Frog idle state ──
+  let blinkT      = 1.5+Math.random()*2;   // countdown to next blink
+  let blinkAnim   = 0;                      // 0..1, eye close progress
+  let throatPulse = 0;                      // 0..1, throat swell
+  let throatT     = 2+Math.random()*3;      // countdown to next throat
+  let wiggleT     = 0;                      // post-catch wiggle timer
+  let lastCatch   = 0;                      // time of last catch
+
+  // ── Ambient sound state ──
+  let ambientNode = null, ambientGain = null;
+  let ambientPhase = -1;
+
+  function startAmbient(phase){
+    if(ambientPhase===phase) return;
+    ambientPhase=phase;
+    // fade out old
+    if(ambientGain) ambientGain.gain.setTargetAtTime(0, getKtAC().currentTime, 0.8);
+    if(phase<0) return;
+    try{
+      const ac=getKtAC();
+      const master=ac.createGain(); master.gain.value=0; master.connect(ac.destination);
+      ambientGain=master;
+      if(phase===0){
+        // day: very gentle high breeze, birds implied by filtering
+        const sr=ac.sampleRate, buf=ac.createBuffer(1,sr*3,sr);
+        const d=buf.getChannelData(0); let b0=0,b1=0;
+        for(let i=0;i<d.length;i++){
+          const w=Math.random()*2-1; b0=0.99*b0+w*0.1; b1=0.97*b1+w*0.15;
+          d[i]=(b0+b1)*0.06;
+        }
+        const s=ac.createBufferSource(); s.buffer=buf; s.loop=true;
+        const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1800;
+        const g=ac.createGain(); g.gain.value=0.18;
+        s.connect(hp); hp.connect(g); g.connect(master); s.start();
+        ambientNode=s;
+      } else if(phase===1){
+        // dusk: low warm hum + faint cricket start
+        const o=ac.createOscillator(); o.type='sine'; o.frequency.value=130;
+        const g=ac.createGain(); g.gain.value=0.06;
+        o.connect(g); g.connect(master); o.start();
+        ambientNode=o;
+      } else if(phase===2){
+        // night: cricket loop — high square wave LFO-chopped
+        const o=ac.createOscillator(); o.type='sine'; o.frequency.value=3200;
+        const lfo=ac.createOscillator(); lfo.type='square'; lfo.frequency.value=16;
+        const lg=ac.createGain(); lg.gain.value=0.05;
+        lfo.connect(lg); lg.connect(o.frequency);
+        const g=ac.createGain(); g.gain.value=0.04;
+        o.connect(g); g.connect(master); o.start(); lfo.start();
+        ambientNode=o;
+      } else if(phase===3){
+        // dawn: soft filtered noise like wind through reeds
+        const sr=ac.sampleRate, buf=ac.createBuffer(1,sr*2,sr);
+        const d=buf.getChannelData(0); let last=0;
+        for(let i=0;i<d.length;i++){ last=(last+0.06*(Math.random()*2-1))/1.06; d[i]=last*3; }
+        const s=ac.createBufferSource(); s.buffer=buf; s.loop=true;
+        const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=600; bp.Q.value=0.8;
+        const g=ac.createGain(); g.gain.value=0.12;
+        s.connect(bp); bp.connect(g); g.connect(master); s.start();
+        ambientNode=s;
+      }
+      master.gain.setTargetAtTime(1, ac.currentTime, 1.2);
+    }catch(e){}
+  }
+
+  function stopAmbient(){
+    if(ambientGain){ try{ ambientGain.gain.setTargetAtTime(0, getKtAC().currentTime, 0.5); }catch(e){} }
+    setTimeout(()=>{ try{ if(ambientNode) ambientNode.stop(); }catch(e){} ambientNode=null; ambientGain=null; }, 2000);
+    ambientPhase=-1;
+  }
+
+  // ribbit sound
+  function soundRibbit(){
+    if(activeGame!=='ketchup') return;
+    try{
+      const ac=getKtAC();
+      // two-note "rib-bit": low chirp then slightly higher
+      [[120,180,0],[160,220,0.18]].forEach(([f1,f2,delay])=>{
+        const o=ac.createOscillator(), g=ac.createGain();
+        o.type='sine';
+        o.frequency.setValueAtTime(f1, ac.currentTime+delay);
+        o.frequency.exponentialRampToValueAtTime(f2, ac.currentTime+delay+0.08);
+        g.gain.setValueAtTime(0.09, ac.currentTime+delay);
+        g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+delay+0.14);
+        o.connect(g); g.connect(ac.destination); o.start(ac.currentTime+delay); o.stop(ac.currentTime+delay+0.15);
+      });
+    }catch(e){}
+  }
+
   // ── Ripples / pops ──
   const ripples=[];
   function addRipple(x,y){ ripples.push({x,y,r:0,alpha:0.55}); }
@@ -1434,16 +1577,34 @@ function initKetchup(){
     cx.fillStyle=bg; cx.fill(); cx.strokeStyle='#228822'; cx.lineWidth=1.2; cx.stroke();
     cx.beginPath(); cx.ellipse(bx,by+5*s,14*s,11*s,0,0,Math.PI*2);
     cx.fillStyle='rgba(200,255,180,0.4)'; cx.fill();
+    // throat sac pulse
+    if(throatPulse>0){
+      const tp=Math.sin(throatPulse*Math.PI);
+      cx.beginPath(); cx.ellipse(bx,by+14*s,(10+tp*6)*s,(6+tp*4)*s,0,0,Math.PI*2);
+      cx.fillStyle=`rgba(180,240,160,${0.3+tp*0.4})`; cx.fill();
+      cx.strokeStyle='rgba(100,180,80,0.4)'; cx.lineWidth=1; cx.stroke();
+    }
+    // post-catch happy wiggle — slight body tilt
+    if(wiggleT>0){
+      // already translated to bx/by via the gradient so just rotate the smile
+    }
     [[-10,-16],[10,-16]].forEach(([ex,ey],ei)=>{
       const eyeX=bx+ex*s,eyeY=by+ey*s;
       cx.beginPath(); cx.arc(eyeX,eyeY,7*s,0,Math.PI*2);
       cx.fillStyle='#f0f0d0'; cx.fill(); cx.strokeStyle='#228822'; cx.lineWidth=1; cx.stroke();
-      const pa=tongueAngle+(ei===0?-0.25:0.25);
-      const px2=eyeX+Math.cos(pa)*2.5*s,py2=eyeY+Math.sin(pa)*2.5*s;
-      cx.beginPath(); cx.arc(px2,py2,3.5*s,0,Math.PI*2);
-      cx.fillStyle='#1a1a1a'; cx.fill();
-      cx.beginPath(); cx.arc(px2-1.2*s,py2-1.2*s,1.2*s,0,Math.PI*2);
-      cx.fillStyle='rgba(255,255,255,0.7)'; cx.fill();
+      // blink: draw eyelid over eye when blinkAnim>0
+      if(blinkAnim>0){
+        const lidH=Math.min(blinkAnim,1)*14*s;
+        cx.beginPath(); cx.ellipse(eyeX,eyeY,7*s,lidH/2,0,0,Math.PI*2);
+        cx.fillStyle='#4ab848'; cx.fill();
+      } else {
+        const pa=tongueAngle+(ei===0?-0.25:0.25);
+        const px2=eyeX+Math.cos(pa)*2.5*s,py2=eyeY+Math.sin(pa)*2.5*s;
+        cx.beginPath(); cx.arc(px2,py2,3.5*s,0,Math.PI*2);
+        cx.fillStyle='#1a1a1a'; cx.fill();
+        cx.beginPath(); cx.arc(px2-1.2*s,py2-1.2*s,1.2*s,0,Math.PI*2);
+        cx.fillStyle='rgba(255,255,255,0.7)'; cx.fill();
+      }
     });
     cx.fillStyle='rgba(0,0,0,0.2)';
     [[-6,0],[6,0]].forEach(([nx,ny])=>{ cx.beginPath(); cx.ellipse(bx+nx*s,by+ny*s,2*s,1.5*s,0,0,Math.PI*2); cx.fill(); });
@@ -1571,17 +1732,121 @@ function initKetchup(){
     }
   }
 
+  function drawFish(dt, time){
+    fish.forEach(f=>{
+      // countdown to next surface visit
+      f.nextSplash-=dt;
+      if(f.nextSplash<=0 && !f.visible){
+        f.visible=true; f.splashT=1.2; f.nextSplash=4+Math.random()*10;
+        f.x=Math.random()*0.8+0.1;
+      }
+      if(!f.visible) return;
+      f.splashT-=dt;
+      if(f.splashT<=0){ f.visible=false; return; }
+
+      const x=f.x*W, y=f.y*H;
+      const progress=1-f.splashT/1.2; // 0=just appeared, 1=gone
+      // fish arc: jumps up then back down
+      const arcY = y - Math.sin(progress*Math.PI)*22*sc();
+      const alpha = progress<0.15 ? progress/0.15 : progress>0.85 ? (1-progress)/0.15 : 1;
+
+      cx.save(); cx.globalAlpha=alpha*0.75;
+      cx.translate(x, arcY);
+      // fish body
+      const fl=18*sc(), fw=7*sc();
+      cx.beginPath(); cx.ellipse(0,0,fl,fw,0,0,Math.PI*2);
+      cx.fillStyle='#e8a840'; cx.fill();
+      // tail
+      cx.beginPath();
+      cx.moveTo(-fl,0); cx.lineTo(-fl-8*sc(),-6*sc()); cx.lineTo(-fl-8*sc(),6*sc()); cx.closePath();
+      cx.fillStyle='#c87820'; cx.fill();
+      // eye
+      cx.beginPath(); cx.arc(fl*0.5,-fw*0.2,2*sc(),0,Math.PI*2);
+      cx.fillStyle='#1a1a1a'; cx.fill();
+      cx.restore();
+
+      // splash rings at water level
+      if(progress<0.5){
+        const splashAlpha=(0.5-progress)/0.5*0.5;
+        cx.beginPath(); cx.ellipse(x, y, (progress*60+8)*sc(), (progress*20+3)*sc(), 0,0,Math.PI*2);
+        cx.strokeStyle=`rgba(180,220,255,${splashAlpha})`; cx.lineWidth=1.5; cx.stroke();
+      }
+    });
+  }
+
+  function updateDrawDragonflies(dt, time){
+    // only show during day and dusk
+    const alpha = currentPhase===0 ? 1 : currentPhase===1 ? Math.max(0,1-phaseT*2) : 0;
+
+    dragonflies.forEach((d,i)=>{
+      // respawn countdown when dead
+      if(!d.alive){
+        if(d.catchAnim>0){ d.catchAnim=Math.max(0,d.catchAnim-dt*3); }
+        d.respawnT-=dt;
+        if(d.respawnT<=0){ Object.assign(d, makeDragonfly()); }
+        return;
+      }
+      if(alpha<=0.01) return;
+
+      // movement — faster and more erratic than flies
+      d.wingPhase+=0.22;
+      d.phase+=0.03;
+      d.x+=d.vx*0.016;
+      d.y+=Math.sin(d.phase*1.4)*0.0012;
+      // occasional direction twitch
+      if(Math.random()<0.008) d.vx*=-1;
+      if(d.x<0.05||d.x>0.95) d.vx*=-1;
+      if(d.y<0.18) d.y=0.18;
+      if(d.y>0.52) d.y=0.52;
+
+      const dx2=d.x*W, dy2=d.y*H;
+      const s2=sc();
+      cx.save(); cx.globalAlpha=alpha*0.88;
+      cx.translate(dx2,dy2);
+      if(d.vx<0) cx.scale(-1,1);
+      // wings — 4 thin ellipses, faster flap
+      const wFlap=Math.sin(d.wingPhase)*0.45;
+      [[-1,-1],[1,-1],[-1,0.4],[1,0.4]].forEach(([sx,sy],wi)=>{
+        cx.save(); cx.rotate(wFlap*(wi<2?-1:1));
+        cx.beginPath(); cx.ellipse(sx*12*s2,sy*5*s2,10*s2,4*s2,sy<0?-0.3:0.3,0,Math.PI*2);
+        cx.fillStyle='rgba(140,200,255,0.60)'; cx.fill();
+        cx.strokeStyle='rgba(100,160,220,0.3)'; cx.lineWidth=0.8; cx.stroke();
+        cx.restore();
+      });
+      // body
+      cx.beginPath(); cx.ellipse(0,0,10*s2,2.5*s2,0,0,Math.PI*2);
+      cx.fillStyle='#1a6a8a'; cx.fill();
+      cx.beginPath(); cx.ellipse(8*s2,0,5*s2,2*s2,0,0,Math.PI*2);
+      cx.fillStyle='#2a9aba'; cx.fill();
+      // eyes
+      cx.beginPath(); cx.arc(-8*s2,-1.5*s2,2.5*s2,0,Math.PI*2);
+      cx.fillStyle='#1a1a1a'; cx.fill();
+      cx.restore();
+    });
+  }
+
   function drawCursor(time){
     if(tongue.active) return;
     const s=sc(),t=time;
     const pulse=0.6+Math.sin(t*4)*0.25;
     cx.save(); cx.globalAlpha=pulse;
     // colour cursor based on phase
-    const cursorCol = currentPhase===2?'rgba(120,255,120,0.85)':
-                      currentPhase===1?'rgba(255,180,80,0.85)':
-                      currentPhase===3?'rgba(255,200,120,0.85)':'rgba(255,80,100,0.85)';
-    cx.strokeStyle=cursorCol; cx.lineWidth=1.5;
+    // dusk sky is orange so cursor must contrast — use bright white-cyan
+    const cursorCol = currentPhase===2?'rgba(120,255,120,0.9)':
+                      currentPhase===1?'rgba(220,245,255,0.95)':
+                      currentPhase===3?'rgba(255,240,180,0.9)':'rgba(255,80,100,0.88)';
     const r=10*s;
+    // dark shadow stroke underneath for contrast on any background
+    cx.strokeStyle='rgba(0,0,0,0.35)'; cx.lineWidth=3;
+    cx.beginPath(); cx.arc(mouseX,mouseY,r,0,Math.PI*2); cx.stroke();
+    cx.beginPath();
+    cx.moveTo(mouseX-r*1.6,mouseY); cx.lineTo(mouseX-r*0.5,mouseY);
+    cx.moveTo(mouseX+r*0.5,mouseY); cx.lineTo(mouseX+r*1.6,mouseY);
+    cx.moveTo(mouseX,mouseY-r*1.6); cx.lineTo(mouseX,mouseY-r*0.5);
+    cx.moveTo(mouseX,mouseY+r*0.5); cx.lineTo(mouseX,mouseY+r*1.6);
+    cx.stroke();
+    // coloured stroke on top
+    cx.strokeStyle=cursorCol; cx.lineWidth=1.5;
     cx.beginPath(); cx.arc(mouseX,mouseY,r,0,Math.PI*2); cx.stroke();
     cx.beginPath();
     cx.moveTo(mouseX-r*1.6,mouseY); cx.lineTo(mouseX-r*0.5,mouseY);
@@ -1638,9 +1903,28 @@ function initKetchup(){
 
   // ── Main loop ──
   let ktLast=performance.now(), time=0;
+  // kick off day ambient on first frame
+  let ambientStarted=false;
   function ktLoop(ts){
     if(activeGame!=='ketchup'){requestAnimationFrame(ktLoop);return;}
     const dt=Math.min((ts-ktLast)/1000,0.05); ktLast=ts; time+=dt;
+    if(!ambientStarted){ ambientStarted=true; startAmbient(0); }
+
+    // ── Idle animations ──
+    blinkT-=dt;
+    if(blinkT<=0){
+      blinkAnim=1; blinkT=2.5+Math.random()*3;
+    }
+    if(blinkAnim>0) blinkAnim=Math.max(0,blinkAnim-dt*8);
+
+    throatT-=dt;
+    if(throatT<=0){
+      throatPulse=1; throatT=3+Math.random()*4;
+      soundRibbit();
+    }
+    if(throatPulse>0) throatPulse=Math.max(0,throatPulse-dt*1.2);
+
+    if(wiggleT>0) wiggleT=Math.max(0,wiggleT-dt);
 
     // ── Phase transition ──
     const targetPhase=getPhase(score);
@@ -1649,6 +1933,7 @@ function initKetchup(){
       if(phaseT>=1){ currentPhase=targetPhase; phaseT=0;
         phaseLabel=PHASE_LABELS[currentPhase]; phaseLabelLife=2.5;
         soundPhase(currentPhase);
+        startAmbient(currentPhase);
         // adapt fly pool to new phase
         for(let i=0;i<flies.length;i++) if(flies[i].alive) spawnFly(i);
       }
@@ -1696,6 +1981,21 @@ function initKetchup(){
               soundHit();
             }
           });
+          // dragonfly hit-test
+          if(!tongue.hit){
+            dragonflies.forEach((d,di)=>{
+              if(!d.alive||tongue.hit) return;
+              const dfx=d.x*W, dfy=d.y*H;
+              if(Math.hypot(tipX-dfx,tipY-dfy)<d.size*sc()*1.8){
+                tongue.hit=true;
+                // encode dragonfly as negative index so catch handler knows
+                tongue.hitFlyIdx=-(di+1);
+                tongue.retractFly={x:dfx,y:dfy,points:3,type:'dragonfly',_df:d};
+                d.alive=false; d.catchAnim=1;
+                soundHit();
+              }
+            });
+          }
         }
         if(tongue.len>=tongue.maxLen) tongue.extending=false;
       } else {
@@ -1706,12 +2006,20 @@ function initKetchup(){
         }
         if(tongue.len<=0){
           if(tongue.hit){
-            const caught=flies[tongue.hitFlyIdx];
+            // negative hitFlyIdx = dragonfly catch
+            const isDragonflyCatch = tongue.hitFlyIdx < 0;
+            const caught = isDragonflyCatch ? tongue.retractFly : flies[tongue.hitFlyIdx];
+            if(isDragonflyCatch){
+              // respawn dragonfly after a delay
+              const df=caught._df;
+              df.alive=false; df.respawnT=6+Math.random()*8;
+            }
             const pts=caught?caught.points:1;
             score+=pts;
             combo++; comboTimer=2.5; comboFlash=1;
             const isMilestone=combo===3||combo===5||combo===10||combo%10===0;
             if(pts>=5) soundMoth();
+            else if(isDragonflyCatch) soundDragonfly();
             else if(pts===2) soundFirefly();
             else soundCatch();
             if(isMilestone){
@@ -1721,6 +2029,9 @@ function initKetchup(){
               flies.forEach(f=>{if(f.alive){const a=Math.random()*Math.PI*2;f.vx+=Math.cos(a)*320;f.vy+=Math.sin(a)*260;}});
               addBurst(frogX(),frogY(),'#ffe066',22);
               addBurst(frogX(),frogY(),'#ff8c42',14);
+            } else if(isDragonflyCatch){
+              addPop(frogX(),frogY()-46*sc(),'🪲 +3',false);
+              addBurst(frogX(),frogY(),'#40c8ff',10);
             } else if(pts>=5){
               addPop(frogX(),frogY()-50*sc(),'✨ GOLDEN MOTH! +5 ✨',true);
               addBurst(frogX(),frogY(),'#ffd700',20);
@@ -1734,7 +2045,8 @@ function initKetchup(){
               addPop(frogX(),frogY()-40*sc(),'+1');
             }
             scoreEl.textContent=`${currentPhase===2?'🌙':currentPhase===1?'🌅':currentPhase===3?'🌄':'🪰'} ${score}`;
-            spawnFly(tongue.hitFlyIdx);
+            wiggleT=0.4;
+            if(tongue.hitFlyIdx>=0) spawnFly(tongue.hitFlyIdx);
             addRipple(frogX(),frogY());
           }
           tongue.active=false; tongue.retractFly=null;
@@ -1754,6 +2066,8 @@ function initKetchup(){
     cx.clearRect(0,0,W,H);
     drawBg(time);
     drawRipples(dt);
+    drawFish(dt,time);
+    updateDrawDragonflies(dt,time);
     drawLilyPad(time);
     drawTongue(time);
     flies.forEach((f,i)=>drawFly(f,i,time));
