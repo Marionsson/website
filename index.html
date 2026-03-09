@@ -289,13 +289,24 @@ body {
 #bw-wrap {
   width:100%; height:100%;
   display:flex; flex-direction:column;
-  align-items:center; justify-content:center;
-  background: #e8f4f8;
-  gap: 20px;
+  align-items:center;
+  background: #ddeef5;
   padding-top: 56px;
+  box-sizing:border-box;
+  position:relative;
+}
+#bw-canvas {
+  display:block;
+  touch-action:none;
+  cursor:crosshair;
+  flex:1 1 0;
+  min-height:0;
+  width:100%;
 }
 #bw-stats {
   display:flex; gap:16px; pointer-events:none;
+  padding: 10px 0 6px 0;
+  flex-shrink:0;
 }
 .bw-stat {
   background:rgba(255,255,255,0.8); backdrop-filter:blur(8px);
@@ -304,59 +315,44 @@ body {
   border:1.5px solid rgba(0,0,0,0.06);
 }
 .bw-stat span { color:#2a7a9e; font-size:1rem; }
-#bw-grid {
-  display: grid;
-  gap: 5px;
-  padding: 20px;
-  background: rgba(255,255,255,0.4);
-  border-radius: 20px;
-  border: 1.5px solid rgba(255,255,255,0.8);
-  box-shadow: 0 4px 24px rgba(0,80,120,0.08);
-}
-.bubble {
-  width: 44px; height: 44px;
-  border-radius: 50%;
-  cursor: pointer;
-  position: relative;
-  transition: transform 0.08s;
-  will-change: transform;
-}
-.bubble:not(.popped) {
-  background: radial-gradient(circle at 35% 32%, rgba(255,255,255,0.9) 0%, rgba(180,225,245,0.7) 40%, rgba(120,190,220,0.5) 100%);
-  box-shadow: inset -2px -3px 6px rgba(0,80,120,0.15), inset 1px 1px 3px rgba(255,255,255,0.8), 0 2px 8px rgba(0,80,120,0.1);
-  border: 1px solid rgba(255,255,255,0.6);
-}
-.bubble:not(.popped):hover { transform: scale(1.12); }
-.bubble:not(.popped):active { transform: scale(0.82); }
-.bubble.popped {
-  background: rgba(160,200,220,0.18);
-  box-shadow: none;
-  border: 1px dashed rgba(120,180,200,0.3);
-  cursor: default;
-  transform: scale(0.88);
-}
-.bubble.popping {
-  animation: pop 0.18s ease-out forwards;
-}
-@keyframes pop {
-  0%   { transform: scale(1.2); }
-  40%  { transform: scale(0.75); }
-  100% { transform: scale(0.88); }
-}
-#bw-footer {
-  display:flex; gap:12px; align-items:center;
-}
-#bw-reset {
-  background: rgba(42,122,158,0.12);
-  border: 1.5px solid rgba(42,122,158,0.25);
-  border-radius: 20px;
-  padding: 8px 20px;
+#bw-msg {
+  font-size:0.85rem; font-weight:800;
+  color: rgba(0,80,120,0.35); letter-spacing:1px;
+  text-transform: uppercase;
   font-family:'Nunito',sans-serif;
-  font-size:0.8rem; font-weight:800;
-  color: #2a7a9e; cursor:pointer;
-  transition: background 0.15s, transform 0.15s;
+  flex-shrink:0;
+  padding-bottom:8px;
 }
-#bw-reset:hover { background: rgba(42,122,158,0.2); transform:scale(1.04); }
+/* sheet picker overlay */
+#bw-picker {
+  display:none;
+  position:absolute; inset:0;
+  background:rgba(220,238,245,0.96);
+  flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:20px; z-index:10;
+  padding-top:56px;
+}
+#bw-picker.visible { display:flex; }
+#bw-picker h2 {
+  font-family:'Playfair Display',serif;
+  font-size:1.3rem; color:#2a5a7a; margin:0;
+}
+#bw-picker-cards {
+  display:flex; gap:14px; flex-wrap:wrap; justify-content:center;
+}
+.bw-sheet-card {
+  background:rgba(255,255,255,0.9);
+  border:2px solid rgba(42,122,158,0.18);
+  border-radius:18px; padding:18px 22px;
+  cursor:pointer; text-align:center; width:140px;
+  transition: transform 0.12s, box-shadow 0.12s;
+  font-family:'Nunito',sans-serif;
+}
+.bw-sheet-card:hover { transform:scale(1.05); box-shadow:0 6px 24px rgba(0,80,120,0.15); }
+.bw-sheet-card .bw-card-icon { font-size:2rem; margin-bottom:8px; }
+.bw-sheet-card .bw-card-name { font-weight:800; color:#2a5a7a; font-size:0.9rem; }
+.bw-sheet-card .bw-card-desc { color:#6a9ab0; font-size:0.72rem; margin-top:4px; }
 /* ════════════════════════════════
    PIZZA BUILDER
 ════════════════════════════════ */
@@ -471,13 +467,6 @@ body {
   color:rgba(255,255,255,0.3);
   letter-spacing:1.5px; text-transform:uppercase;
   pointer-events:none; transition:opacity 0.8s;
-}
-
-#bw-msg {
-  font-size:0.85rem; font-weight:800;
-  color: rgba(0,80,120,0.35); letter-spacing:1px;
-  text-transform: uppercase;
-  font-family:'Nunito',sans-serif;
 }
 
 /* ════════════════════════════════
@@ -754,12 +743,29 @@ body {
     <div id="bw-wrap">
       <div id="bw-stats">
         <div class="bw-stat">popped <span id="bw-count">0</span></div>
-        <div class="bw-stat">remaining <span id="bw-left">80</span></div>
+        <div class="bw-stat">remaining <span id="bw-left">—</span></div>
       </div>
-      <div id="bw-grid"></div>
-      <div id="bw-footer">
-        <button id="bw-reset" onclick="resetBubbles()">new sheet</button>
-        <div id="bw-msg">pop away 🫧</div>
+      <canvas id="bw-canvas"></canvas>
+      <div id="bw-msg">pop away 🫧</div>
+      <div id="bw-picker">
+        <h2>choose your next sheet</h2>
+        <div id="bw-picker-cards">
+          <div class="bw-sheet-card" onclick="bwPickSheet('standard')">
+            <div class="bw-card-icon">🫧</div>
+            <div class="bw-card-name">Standard</div>
+            <div class="bw-card-desc">classic wrap · occasional chain pops</div>
+          </div>
+          <div class="bw-sheet-card" onclick="bwPickSheet('industrial')">
+            <div class="bw-card-icon">📦</div>
+            <div class="bw-card-name">Industrial</div>
+            <div class="bw-card-desc">big chunky bubbles · deep satisfying thuds</div>
+          </div>
+          <div class="bw-sheet-card" onclick="bwPickSheet('jewellery')">
+            <div class="bw-card-icon">💎</div>
+            <div class="bw-card-name">Jewellery</div>
+            <div class="bw-card-desc">tiny dense wrap · rapid-fire pops</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -868,7 +874,7 @@ function launchGame(id){
     activeGame = id;
     if(id==='stressball' && !sbStarted){ initStressBall(); sbStarted=true; }
     if(id==='ketchup'    && !ktStarted){ initKetchup();    ktStarted=true; }
-    if(id==='bubbles'){ initBubbles(); }
+    if(id==='bubbles'){ initBubbles('standard'); }
     if(id==='snowglobe'  && !sgStarted){ initSnowGlobe();  sgStarted=true; }
     if(id==='pizza'      && !pzStarted){ initPizza();      pzStarted=true; }
     if(id==='paintmix'   && !chStarted){ initPaintMix();   chStarted=true; }
@@ -879,6 +885,7 @@ function launchGame(id){
 
 function goBack(){
   activeGame = null;  // immediately stops all game loops and sound guards
+  const bwCv=document.getElementById('bw-canvas'); if(bwCv&&bwCv._bwStop) bwCv._bwStop();
   if(window._ktAC){ try{ window._ktAC.close(); }catch(e){} window._ktAC=null; }
   // reset ambient state so it restarts cleanly next time
   // (stopAmbient would reference dead AC, just null the refs)
@@ -2087,89 +2094,235 @@ function initKetchup(){
 /* ══════════════════════════════════════════════════════════
    BUBBLE WRAP
 ══════════════════════════════════════════════════════════ */
-let bwPopped=0, bwTotal=0;
 
 // ── Bubble pop sound via Web Audio API ──
-let bwAudioCtx=null;
-function getBwAudio(){
-  if(!bwAudioCtx) bwAudioCtx=new(window.AudioContext||window.webkitAudioContext)();
-  return bwAudioCtx;
+// ══════════════════════════════════════════════════════════
+// BUBBLE WRAP — canvas rewrite
+// ══════════════════════════════════════════════════════════
+let bwAC=null;
+function getBwAC(){
+  if(!bwAC||bwAC.state==='closed') bwAC=new(window.AudioContext||window.webkitAudioContext)();
+  return bwAC;
 }
-function playPop(){
+
+function bwPopSound(type){
   try{
-    const ac=getBwAudio();
-    // Tiny burst of noise shaped into a snap
-    const bufLen=ac.sampleRate*0.06;
-    const buf=ac.createBuffer(1,bufLen,ac.sampleRate);
-    const data=buf.getChannelData(0);
-    for(let i=0;i<bufLen;i++){
-      // white noise with fast exponential decay
-      data[i]=(Math.random()*2-1)*Math.pow(1-i/bufLen,6);
+    const ac=getBwAC(); if(ac.state==='suspended') ac.resume();
+    if(type==='normal'){
+      // original satisfying pop
+      const bufLen=ac.sampleRate*0.06;
+      const buf=ac.createBuffer(1,bufLen,ac.sampleRate);
+      const data=buf.getChannelData(0);
+      for(let i=0;i<bufLen;i++) data[i]=(Math.random()*2-1)*Math.pow(1-i/bufLen,6);
+      const s=ac.createBufferSource(); s.buffer=buf;
+      const bp=ac.createBiquadFilter(); bp.type='bandpass';
+      bp.frequency.value=1200+Math.random()*600; bp.Q.value=0.8;
+      const g=ac.createGain();
+      g.gain.setValueAtTime(0.55+Math.random()*0.2, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+0.055);
+      s.connect(bp); bp.connect(g); g.connect(ac.destination); s.start();
+    } else if(type==='industrial'){
+      // deep thud — low sine + noise
+      const o=ac.createOscillator(), og=ac.createGain();
+      o.type='sine'; o.frequency.setValueAtTime(90+Math.random()*30,ac.currentTime);
+      o.frequency.exponentialRampToValueAtTime(40,ac.currentTime+0.18);
+      og.gain.setValueAtTime(0.5,ac.currentTime); og.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.22);
+      o.connect(og); og.connect(ac.destination); o.start(); o.stop(ac.currentTime+0.24);
+      const sr=ac.sampleRate, dur=0.12;
+      const buf=ac.createBuffer(1,Math.ceil(sr*dur),sr);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);
+      const s=ac.createBufferSource(); s.buffer=buf;
+      const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=300;
+      const g=ac.createGain(); g.gain.value=0.28;
+      s.connect(lp); lp.connect(g); g.connect(ac.destination); s.start();
+    } else if(type==='jewellery'){
+      // tiny high tick
+      const sr=ac.sampleRate, dur=0.025;
+      const buf=ac.createBuffer(1,Math.ceil(sr*dur),sr);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,8);
+      const s=ac.createBufferSource(); s.buffer=buf;
+      const bp=ac.createBiquadFilter(); bp.type='bandpass';
+      bp.frequency.value=2400+Math.random()*800; bp.Q.value=1.2;
+      const g=ac.createGain(); g.gain.value=0.30;
+      s.connect(bp); bp.connect(g); g.connect(ac.destination); s.start();
     }
-    const src=ac.createBufferSource();
-    src.buffer=buf;
-
-    // band-pass filter gives it a tight "pop" timbre
-    const bp=ac.createBiquadFilter();
-    bp.type='bandpass';
-    // slight pitch variation so each pop sounds a little different
-    bp.frequency.value=1200+Math.random()*600;
-    bp.Q.value=0.8;
-
-    // small gain so it's satisfying but not jarring
-    const gain=ac.createGain();
-    gain.gain.setValueAtTime(0.55+Math.random()*0.2, ac.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime+0.055);
-
-    src.connect(bp); bp.connect(gain); gain.connect(ac.destination);
-    src.start();
   }catch(e){}
 }
 
-function initBubbles(){
-  bwPopped=0;
-  const grid=document.getElementById('bw-grid');
-  grid.innerHTML='';
+function initBubbles(sheetType){
+  // close old AC so no ghost sounds
+  if(bwAC){ try{ bwAC.close(); }catch(e){} bwAC=null; }
 
-  // Fit cols/rows to screen
-  const avW=Math.min(window.innerWidth-80, 600);
-  const avH=window.innerHeight-240;
-  const bSize=48, gap=5;
-  const cols=Math.max(4,Math.floor((avW)/(bSize+gap)));
-  const rows=Math.max(3,Math.floor((avH)/(bSize+gap)));
-  bwTotal=cols*rows;
-  grid.style.gridTemplateColumns=`repeat(${cols},${bSize}px)`;
+  const cv=document.getElementById('bw-canvas');
+  const wrap=document.getElementById('bw-wrap');
+  const picker=document.getElementById('bw-picker');
+  picker.classList.remove('visible');
 
-  document.getElementById('bw-left').textContent=bwTotal;
+  // size canvas to fill available space
+  const W=cv.offsetWidth||wrap.clientWidth;
+  const H=wrap.clientHeight - 90; // leave room for stats+msg
+  cv.width=W; cv.height=Math.max(H,200);
+
+  const ctx=cv.getContext('2d');
+  const type=sheetType||'standard';
+
+  // sheet config
+  const CFG={
+    standard:  {r:20, gap:6,  chain:0.04, color:[170,215,235]},
+    industrial:{r:36, gap:10, chain:0.02, color:[160,200,220]},
+    jewellery: {r:10, gap:3,  chain:0.06, color:[190,220,240]},
+  }[type];
+
+  const step=CFG.r*2+CFG.gap;
+  const cols=Math.max(2,Math.floor((W-CFG.gap)/(step)));
+  const rows=Math.max(2,Math.floor((cv.height-CFG.gap)/(step)));
+  const offX=(W-(cols*step-CFG.gap))/2;
+  const offY=(cv.height-(rows*step-CFG.gap))/2;
+
+  // build bubble grid
+  const bubbles=[];
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      bubbles.push({
+        x: offX+c*step+CFG.r,
+        y: offY+r*step+CFG.r,
+        r: CFG.r,
+        row:r, col:c, cols, rows,
+        popped:false,
+        popAnim:0,
+        type,
+        ripple:0,
+      });
+    }
+  }
+
+  let popped=0;
+  const total=bubbles.length;
+  document.getElementById('bw-left').textContent=total;
   document.getElementById('bw-count').textContent=0;
   document.getElementById('bw-msg').textContent='pop away 🫧';
 
-  for(let i=0;i<bwTotal;i++){
-    const b=document.createElement('div');
-    b.className='bubble';
-    b.addEventListener('click',()=>popBubble(b));
-    b.addEventListener('touchstart',e=>{e.preventDefault();popBubble(b);},{passive:false});
-    grid.appendChild(b);
+  const msgs=['pop away 🫧','nice · keep going','halfway there!','almost done...','so close!!'];
+
+  function getNeighbours(b){
+    return bubbles.filter(n=>!n.popped&&n!==b&&
+      Math.abs(n.col-b.col)<=1&&Math.abs(n.row-b.row)<=1);
   }
+
+  function doPop(b, delay=0, chainDepth=0){
+    if(b.popped) return;
+    b.popped=true; b.popAnim=1;
+    setTimeout(()=>{
+      bwPopSound(type==='industrial'?'industrial':type==='jewellery'?'jewellery':'normal');
+      popped++;
+      document.getElementById('bw-count').textContent=popped;
+      document.getElementById('bw-left').textContent=total-popped;
+      const idx=Math.min(Math.floor((popped/total)*5),4);
+      if(popped<total) document.getElementById('bw-msg').textContent=msgs[idx];
+      else{
+        document.getElementById('bw-msg').textContent='all done!! 🎉';
+        setTimeout(()=>picker.classList.add('visible'),800);
+      }
+
+      // gentle chain — only from direct player pop (depth 0), max 1 neighbour
+      if(chainDepth===0){
+        const nb=getNeighbours(b);
+        for(const n of nb){
+          if(Math.random()<CFG.chain){
+            n.ripple=1;
+            doPop(n, 120, 1);
+            break; // only ever one
+          }
+        }
+      }
+    }, delay);
+  }
+
+  // ── Draw loop ──
+  let bwRunning=true;
+  function draw(){
+    if(!bwRunning) return;
+    ctx.clearRect(0,0,W,cv.height);
+
+    // soft background
+    ctx.fillStyle='#ddeef5'; ctx.fillRect(0,0,W,cv.height);
+
+    const [cr,cg,cb]=CFG.color;
+
+    bubbles.forEach(b=>{
+      if(b.popAnim>0) b.popAnim=Math.max(0,b.popAnim-0.12);
+      if(b.ripple>0) b.ripple=Math.max(0,b.ripple-0.04);
+
+      if(b.popped && b.popAnim<=0){
+        // flat dimple
+        ctx.beginPath(); ctx.arc(b.x,b.y,b.r*0.82,0,Math.PI*2);
+        ctx.fillStyle=`rgba(${cr},${cg},${cb},0.18)`; ctx.fill();
+        ctx.strokeStyle=`rgba(${cr-30},${cg-20},${cb-10},0.2)`; ctx.lineWidth=1;
+        ctx.setLineDash([3,4]); ctx.stroke(); ctx.setLineDash([]);
+        return;
+      }
+
+      // pop scale animation
+      const sc2=b.popped?(0.88*(1-b.popAnim)+0.4*b.popAnim)
+                        :(1+Math.sin(b.popAnim*Math.PI)*0.28);
+      ctx.save(); ctx.translate(b.x,b.y); ctx.scale(sc2,sc2);
+
+      // ripple ring
+      if(b.ripple>0.01){
+        ctx.beginPath(); ctx.arc(0,0,b.r*(1+( 1-b.ripple)*0.8),0,Math.PI*2);
+        ctx.strokeStyle=`rgba(255,220,80,${b.ripple*0.6})`; ctx.lineWidth=2; ctx.stroke();
+      }
+
+      // bubble body
+      const grad=ctx.createRadialGradient(-b.r*0.3,-b.r*0.35,b.r*0.05,0,0,b.r);
+      grad.addColorStop(0,'rgba(255,255,255,0.96)');
+      grad.addColorStop(0.4,`rgba(${cr},${cg},${cb},0.72)`);
+      grad.addColorStop(1,`rgba(${cr-30},${cg-25},${cb-15},0.45)`);
+      ctx.beginPath(); ctx.arc(0,0,b.r,0,Math.PI*2);
+      ctx.fillStyle=grad; ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.lineWidth=1.2; ctx.stroke();
+      // specular highlight
+      ctx.beginPath(); ctx.ellipse(-b.r*0.28,-b.r*0.32,b.r*0.28,b.r*0.16,-0.4,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(-b.r*0.1,-b.r*0.48,b.r*0.1,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.fill();
+
+      ctx.restore();
+    });
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+
+  // ── Input ──
+  function hitTest(px,py){
+    for(let i=bubbles.length-1;i>=0;i--){
+      const b=bubbles[i];
+      if(!b.popped&&Math.hypot(px-b.x,py-b.y)<b.r*1.15) return b;
+    }
+    return null;
+  }
+  function onPos(px,py){ const b=hitTest(px,py); if(b) doPop(b); }
+  function cvPos(e){
+    const r2=cv.getBoundingClientRect();
+    // scale from CSS pixels to canvas pixels
+    const scaleX=cv.width/r2.width, scaleY=cv.height/r2.height;
+    return [(e.clientX-r2.left)*scaleX, (e.clientY-r2.top)*scaleY];
+  }
+  cv.addEventListener('pointerdown',e=>{ const [x,y]=cvPos(e); onPos(x,y); });
+  cv.addEventListener('pointermove',e=>{
+    if(e.buttons===0) return;
+    const [x,y]=cvPos(e); onPos(x,y);
+  });
+
+  // stop draw loop when leaving game
+  cv._bwStop=()=>{ bwRunning=false; };
 }
 
-function popBubble(b){
-  if(b.classList.contains('popped'))return;
-  playPop();
-  b.classList.add('popping');
-  b.addEventListener('animationend',()=>{
-    b.classList.remove('popping');
-    b.classList.add('popped');
-  },{once:true});
-  bwPopped++;
-  document.getElementById('bw-count').textContent=bwPopped;
-  document.getElementById('bw-left').textContent=bwTotal-bwPopped;
-  const msgs=['pop away 🫧','nice one','keep going...','halfway there!','almost...','SO CLOSE','all done!! 🎉'];
-  const idx=Math.floor((bwPopped/bwTotal)*6);
-  document.getElementById('bw-msg').textContent = bwPopped===bwTotal ? 'all done!! 🎉 new sheet?' : msgs[Math.min(idx,5)];
-}
-
-function resetBubbles(){ initBubbles(); }
+function bwPickSheet(type){ initBubbles(type); }
+function resetBubbles(){ initBubbles('standard'); }
 
 
 /* ══════════════════════════════════════════════════════════
