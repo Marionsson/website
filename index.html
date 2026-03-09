@@ -3832,188 +3832,258 @@ function initPlant(){
               - document.getElementById('plant-hint').offsetHeight - 56 - 8;
     if(cv.height < 80) cv.height = 200;
   }
-  resize(); window.addEventListener('resize',()=>{ resize(); });
+  resize(); window.addEventListener('resize', resize);
 
   const W = ()=>cv.width, H = ()=>cv.height;
 
-  // ── Water / growth state ──
-  // water: 0..1 current moisture level
-  // growth: 0..1 total growth progress (never goes down)
-  // wiltT: countdown timer when water==0
-  let water    = 0;      // current moisture
-  let growth   = 0;      // cumulative 0..1
-  let wilt     = 0;      // 0..1 wilt amount (increases when dry)
-  let watering = false;  // button held
-  let mouseX   = W()/2, mouseY = H()*0.5;
+  // ── State ──
+  let water    = 0;
+  let growth   = 0;
+  let wilt     = 0;
+  let watering = false;
+  let mouseX   = 0, mouseY = 0;
 
-  // water droplets for visual feedback
-  const drops  = [];
-  // petals / blooms stored permanently once they appear
+  // ── Season system (unlocks after full bloom) ──
+  const SEASON_NAMES = ['Spring 🌸','Summer 🌿','Autumn 🍂','Winter ❄️'];
+  const SEASON_DUR   = 90;
+  let   seasonUnlocked = false;
+  let   season    = 0;
+  let   seasonT   = 0;
+  let   leafFall  = [];
+  let   snowflakes= [];
+
+  // ── Fixed tree personality ──
+  let treeSeed = Math.floor(Math.random()*99999);
+  let treeFixed = false;
+
+  // ── Blooms ──
   const blooms = [];
   let bloomsGenerated = false;
 
+  // ── Bird ──
+  const bird = {
+    active:false, x:0, y:0, perchX:0, perchY:0,
+    state:'flying', t:0, nextVisit:12, wingPhase:0, dir:1,
+  };
+  let birdChirpT = 5;
+
+  // ── Particles ──
+  const drops = [];
+
   // ── Stages ──
-  // 0: seedling (growth 0–0.15)
-  // 1: sprout   (0.15–0.35)
-  // 2: sapling  (0.35–0.6)
-  // 3: full tree(0.6–0.85)
-  // 4: blooming (0.85–1.0)
   const STAGE_NAMES  = ['Seedling 🌱','Sprout 🌿','Sapling 🌳','Tree 🌲','Blooming 🌸'];
   const STAGE_BREAKS = [0, 0.15, 0.35, 0.60, 0.85];
   function getStage(g){ let s=0; for(let i=0;i<STAGE_BREAKS.length;i++) if(g>=STAGE_BREAKS[i]) s=i; return s; }
 
   // ── Audio ──
   let plAC=null;
-  function getAC(){ if(!plAC) plAC=new(window.AudioContext||window.webkitAudioContext)(); return plAC; }
+  function getAC(){
+    if(!plAC||plAC.state==='closed') plAC=new(window.AudioContext||window.webkitAudioContext)();
+    return plAC;
+  }
   function waterDrop(){
+    if(activeGame!=='plant') return;
     try{
       const ac=getAC(); if(ac.state==='suspended') ac.resume();
-      // soft noise burst — like a drop landing on soil/leaves
       const sr=ac.sampleRate, dur=0.08, buf=ac.createBuffer(1,Math.ceil(sr*dur),sr);
       const d=buf.getChannelData(0);
       for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);
-      const src2=ac.createBufferSource(); src2.buffer=buf;
-      // band-pass around 400–900 Hz for a soft thud/drip timbre
+      const s=ac.createBufferSource(); s.buffer=buf;
       const bp=ac.createBiquadFilter(); bp.type='bandpass';
       bp.frequency.value=500+Math.random()*300; bp.Q.value=1.2;
-      // gentle low-pass to remove harshness
       const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1800;
       const g=ac.createGain();
       g.gain.setValueAtTime(0.22,ac.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur+0.06);
-      src2.connect(bp); bp.connect(lp); lp.connect(g); g.connect(ac.destination);
-      src2.start(); src2.stop(ac.currentTime+dur+0.08);
+      s.connect(bp); bp.connect(lp); lp.connect(g); g.connect(ac.destination);
+      s.start(); s.stop(ac.currentTime+dur+0.08);
     }catch(e){}
   }
   function bloomChime(){
+    if(activeGame!=='plant') return;
     try{
       const ac=getAC();
-      // gentle wind-chime: two partials per note, soft attack, long decay
       [523,659,784,1047].forEach((f,i)=>{
-        [1, 2.756].forEach((ratio,j)=>{
+        [1,2.756].forEach((ratio,j)=>{
           const o=ac.createOscillator(),g=ac.createGain();
           o.type='sine'; o.frequency.value=f*ratio;
           const t=ac.currentTime+i*0.18;
           g.gain.setValueAtTime(0,t);
-          g.gain.linearRampToValueAtTime(j===0?0.07:0.025, t+0.08);
+          g.gain.linearRampToValueAtTime(j===0?0.07:0.025,t+0.08);
           g.gain.exponentialRampToValueAtTime(0.001,t+1.4);
-          o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+1.5);
+          o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+1.5);
         });
       });
     }catch(e){}
   }
+  function birdChirp(){
+    if(activeGame!=='plant') return;
+    try{
+      const ac=getAC();
+      [[880,1200,0],[1000,1400,0.18]].forEach(([f1,f2,delay])=>{
+        const o=ac.createOscillator(),g=ac.createGain();
+        o.type='sine';
+        o.frequency.setValueAtTime(f1,ac.currentTime+delay);
+        o.frequency.linearRampToValueAtTime(f2,ac.currentTime+delay+0.1);
+        g.gain.setValueAtTime(0.07,ac.currentTime+delay);
+        g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+delay+0.22);
+        o.connect(g); g.connect(ac.destination);
+        o.start(ac.currentTime+delay); o.stop(ac.currentTime+delay+0.25);
+      });
+    }catch(e){}
+  }
+  function windSound(){
+    if(activeGame!=='plant') return;
+    try{
+      const ac=getAC();
+      const sr=ac.sampleRate, buf=ac.createBuffer(1,sr*1,sr);
+      const d=buf.getChannelData(0); let b0=0,b1=0;
+      for(let i=0;i<d.length;i++){
+        const w2=Math.random()*2-1; b0=0.99*b0+w2*0.08; b1=0.97*b1+w2*0.1;
+        d[i]=(b0+b1)*0.3*Math.sin(i/d.length*Math.PI);
+      }
+      const s=ac.createBufferSource(); s.buffer=buf;
+      const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=800;
+      const g=ac.createGain(); g.gain.value=0.12;
+      s.connect(hp); hp.connect(g); g.connect(ac.destination); s.start();
+    }catch(e){}
+  }
 
-  // ── Fractal tree using L-system style recursive drawing ──
-  // params driven by growth (0..1) and wilt (0..1)
-  function drawTree(g, wilt){
+  // ── Seeded RNG ──
+  function makeRng(seed){
+    let x=seed|0||1;
+    return ()=>{ x=(x*16807+0)%2147483647; return (x-1)/2147483646; };
+  }
+
+  // branch tips in canvas coords (for bird perching)
+  let branchTips = [];
+
+  function drawTree(g, wiltAmt){
     const w=W(), h=H();
-    const baseX = w/2;
-    const baseY = h - (h * 0.08); // ground level
-    const stage = getStage(g);
+    const stage=getStage(g);
+    const seed=treeFixed?treeSeed:Math.floor(g*200)+42;
 
-    // tree parameters scale with growth
-    const trunkH  = h * (0.05 + g * 0.38);       // trunk height
-    const trunkW  = Math.max(3, 4 + g * 14);       // trunk width at base
-    const depth   = Math.floor(2 + g * 5);         // branching depth
-    const spread  = 0.55 + g * 0.35;               // branch spread angle
-    const branchLen = trunkH * (0.55 + g * 0.08);  // initial branch length
-    const lenDecay  = 0.62 + g * 0.06;             // branch shortening factor
-    const wiltAng   = wilt * 0.45;                 // drooping from wilt
+    // natural coordinate system: 1000 high, 500 wide centre
+    const NAT_H=1000, NAT_CX=500;
+    const groundY_nat=NAT_H*0.88;
 
-    // colours evolve with stage
-    const trunkCol = stage < 2 ? '#7daa5a' : '#5a3a1a';
-    const leafCols = [
-      ['#a8d5a2','#7bc47a'],                  // seedling
-      ['#6abf69','#4caf50'],                  // sprout
-      ['#388e3c','#2e7d32'],                  // sapling
-      ['#1b5e20','#2e7d32'],                  // full tree
-      ['#2e7d32','#1b5e20'],                  // blooming — leaves stay green
-    ];
-    const [leafA,leafB] = leafCols[stage];
+    const trunkH  = NAT_H*(0.05+g*0.38);
+    const trunkW  = Math.max(3,4+g*14);
+    const depth   = Math.floor(2+g*5);
+    const spread  = 0.55+g*0.35;
+    const branchLen=trunkH*(0.55+g*0.08);
+    const lenDecay =0.62+g*0.06;
+    const wiltAng  =wiltAmt*0.45;
 
-    // draw pot/soil
-    drawPot(baseX, baseY, g, stage);
+    // collect tip positions for bounding box
+    const tips=[];
+    function measure(nx,ny,angle,len,d2,rng2){
+      if(d2<=0||len<2) return;
+      const da=angle+(angle>0?wiltAng:-wiltAng)*(1-d2/depth);
+      const ex=nx+Math.cos(da)*len, ey=ny+Math.sin(da)*len;
+      if(d2<=2) tips.push([ex,ey]);
+      const cl=len*lenDecay;
+      measure(ex,ey,da-spread*(0.7+rng2()*0.3),cl,d2-1,rng2);
+      measure(ex,ey,da+spread*(0.7+rng2()*0.3),cl,d2-1,rng2);
+      if(d2>=3&&g>0.4&&rng2()<0.4) measure(ex,ey,da+(rng2()-0.5)*spread*0.5,cl*0.7,d2-2,rng2);
+    }
+    if(stage>=1) measure(NAT_CX,groundY_nat-trunkH,-Math.PI/2,branchLen,depth,makeRng(seed));
 
-    // recursive branch drawer
-    function branch(x, y, angle, len, depth2, width){
-      if(depth2<=0 || len<2) return;
+    // bounding box → scale to fit canvas
+    let minX=NAT_CX,maxX=NAT_CX,minY=groundY_nat-trunkH;
+    tips.forEach(([tx,ty])=>{ minX=Math.min(minX,tx); maxX=Math.max(maxX,tx); minY=Math.min(minY,ty); });
+    const natW=Math.max(maxX-minX,40), natH=Math.max(groundY_nat-minY,40);
+    const padX=w*0.10, padY=h*0.06;
+    const sc2=Math.min((w-padX*2)/natW,(h-padY*2-h*0.12)/natH,2.0);
 
-      // add wilt droop as tree gets dry — angle bends toward down (PI/2)
-      const droopedAngle = angle + (angle > 0 ? wiltAng : -wiltAng) * (1-depth2/depth);
+    // canvas transform: map (NAT_CX, groundY_nat) → (w/2, groundY_cv)
+    const groundY_cv=h-h*0.08;
+    const ox=w/2-NAT_CX*sc2, oy=groundY_cv-groundY_nat*sc2;
+    const cv2=(nx,ny)=>[nx*sc2+ox, ny*sc2+oy];
 
-      const ex = x + Math.cos(droopedAngle)*len;
-      const ey = y + Math.sin(droopedAngle)*len;
+    // store branch tips in canvas coords for bird
+    branchTips=tips.map(([tx,ty])=>{ const [cx,cy]=cv2(tx,ty); return {x:cx,y:cy}; });
 
-      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(ex,ey);
-      // colour: trunk is brown, upper branches go greener
-      const branchFrac = 1 - depth2/depth;
-      const r=Math.round(90 - branchFrac*40), gv=Math.round(58+branchFrac*60), b=Math.round(26);
-      if(stage<2) ctx.strokeStyle=`rgb(80,${110+branchFrac*50},60)`;
-      else ctx.strokeStyle=`rgb(${r+30},${gv-20},${b})`;
-      ctx.lineWidth = Math.max(1, width);
+    // leaf colours by season
+    const growCols=[['#a8d5a2','#7bc47a'],['#6abf69','#4caf50'],['#388e3c','#2e7d32'],['#1b5e20','#2e7d32'],['#2e7d32','#1b5e20']];
+    let leafA,leafB;
+    if(!seasonUnlocked){ [leafA,leafB]=growCols[stage]; }
+    else if(season===0){ leafA='#6abf69'; leafB='#4caf50'; }
+    else if(season===1){ leafA='#2e7d32'; leafB='#1b5e20'; }
+    else if(season===2){
+      const t=Math.min(seasonT/SEASON_DUR,1);
+      leafA=`hsl(${Math.round(120-t*80)},70%,40%)`; leafB=`hsl(${Math.round(100-t*90)},75%,35%)`;
+    } else { leafA='transparent'; leafB='transparent'; }
+
+    const trunkCol=stage<2?'#7daa5a':(season===3?'#4a3020':'#5a3a1a');
+
+    // draw pot
+    const [potX,potY]=cv2(NAT_CX,groundY_nat);
+    drawPot(potX,potY,g,stage);
+
+    // draw branches
+    function branchDraw(nx,ny,angle,len,d2,rng2){
+      if(d2<=0||len<2) return;
+      const da=angle+(angle>0?wiltAng:-wiltAng)*(1-d2/depth);
+      const ex=nx+Math.cos(da)*len, ey=ny+Math.sin(da)*len;
+      const [x1,y1]=cv2(nx,ny), [x2,y2]=cv2(ex,ey);
+      const bf=1-d2/depth;
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+      if(stage<2) ctx.strokeStyle=`rgb(80,${Math.round(110+bf*50)},60)`;
+      else if(season===3) ctx.strokeStyle=`rgb(${Math.round(70+bf*10)},${Math.round(40+bf*10)},20)`;
+      else ctx.strokeStyle=`rgb(${Math.round(120-bf*40)},${Math.round(38+bf*60)},26)`;
+      ctx.lineWidth=Math.max(0.8,((depth-d2+1)/(depth+1))*trunkW*0.7*sc2);
       ctx.lineCap='round'; ctx.stroke();
 
-      if(depth2<=2){
-        // draw leaf cluster at tips
-        const leafR = 6 + len*0.55 + g*8;
-        const lgrad = ctx.createRadialGradient(ex,ey,0,ex,ey,leafR);
-        lgrad.addColorStop(0, leafA+'cc'); lgrad.addColorStop(1, leafB+'44');
-        ctx.beginPath(); ctx.arc(ex,ey,leafR,0,Math.PI*2);
+      if(d2<=2 && season!==3 && leafA!=='transparent'){
+        const leafR=(6+len*0.55+g*8)*sc2;
+        // spawn falling leaf in autumn
+        if(season===2 && Math.random()<0.0012){
+          leafFall.push({x:x2,y:y2,vx:(Math.random()-0.5)*30,vy:-5,rot:Math.random()*Math.PI*2,rotV:(Math.random()-0.5)*3,life:1,hue:15+Math.floor(Math.random()*35)});
+        }
+        const lgrad=ctx.createRadialGradient(x2,y2,0,x2,y2,leafR);
+        lgrad.addColorStop(0,leafA+'cc'); lgrad.addColorStop(1,leafB+'44');
+        ctx.beginPath(); ctx.arc(x2,y2,leafR,0,Math.PI*2);
         ctx.fillStyle=lgrad; ctx.fill();
       }
 
-      // recurse: two children
-      const childLen = len * lenDecay;
-      const childW   = width * 0.65;
-      branch(ex, ey, droopedAngle - spread*(0.7+Math.random()*0.3), childLen, depth2-1, childW);
-      branch(ex, ey, droopedAngle + spread*(0.7+Math.random()*0.3), childLen, depth2-1, childW);
-      // sometimes a third thinner branch for fullness
-      if(depth2>=3 && g>0.4 && Math.random()<0.4){
-        branch(ex, ey, droopedAngle + (Math.random()-0.5)*spread*0.5, childLen*0.7, depth2-2, childW*0.5);
-      }
+      const cl=len*lenDecay;
+      branchDraw(ex,ey,da-spread*(0.7+rng2()*0.3),cl,d2-1,rng2);
+      branchDraw(ex,ey,da+spread*(0.7+rng2()*0.3),cl,d2-1,rng2);
+      if(d2>=3&&g>0.4&&rng2()<0.4) branchDraw(ex,ey,da+(rng2()-0.5)*spread*0.5,cl*0.7,d2-2,rng2);
     }
 
     // trunk
-    ctx.beginPath(); ctx.moveTo(baseX, baseY - 4);
-    ctx.lineTo(baseX, baseY - trunkH);
-    ctx.strokeStyle = trunkCol;
-    ctx.lineWidth = trunkW; ctx.lineCap='round'; ctx.stroke();
+    const [tx1,ty1]=cv2(NAT_CX,groundY_nat-4), [tx2,ty2]=cv2(NAT_CX,groundY_nat-trunkH);
+    ctx.beginPath(); ctx.moveTo(tx1,ty1); ctx.lineTo(tx2,ty2);
+    ctx.strokeStyle=trunkCol; ctx.lineWidth=trunkW*sc2; ctx.lineCap='round'; ctx.stroke();
 
-    if(stage>=1){
-      // seed the random branches consistently per growth level
-      // (use a stable seed so the tree doesn't flicker every frame)
-      const seed = Math.floor(g*200);
-      Math.seedrng = function(s){ let x=s; return ()=>{ x=(x*16807+0)%2147483647; return (x-1)/2147483646; }; };
-      const rng = Math.seedrng(seed+42);
-      // override random for branches
-      const origRand = Math.random;
-      Math.random = rng;
-      branch(baseX, baseY - trunkH, -Math.PI/2, branchLen, depth, trunkW*0.7);
-      Math.random = origRand;
-    }
+    if(stage>=1) branchDraw(NAT_CX,groundY_nat-trunkH,-Math.PI/2,branchLen,depth,makeRng(seed));
 
-    // draw blooms on top
-    if(stage>=4 && blooms.length>0){
-      blooms.forEach(b=>{
-        const bx = baseX + b.offX*(w*0.3), by = (baseY-trunkH) + b.offY*(trunkH*0.7);
-        drawBloom(bx,by,b.size,b.hue,b.petalCount);
-      });
+    // blooms
+    if(stage>=4 && blooms.length>0 && season!==3){
+      const ba=season===2?Math.max(0,1-seasonT/SEASON_DUR*2):1;
+      if(ba>0.01){
+        ctx.globalAlpha=ba;
+        blooms.forEach(b=>{
+          const [bx,by]=cv2(NAT_CX+b.offX*(natW*0.35),groundY_nat-trunkH+b.offY*(trunkH*0.7));
+          drawBloom(bx,by,b.size*sc2,b.hue,b.petalCount);
+        });
+        ctx.globalAlpha=1;
+      }
     }
   }
 
   function drawPot(cx2,cy2,g,stage){
-    const w2=Math.max(20, 18+g*28), h2=Math.max(14, 12+g*18);
-    // soil mound
+    const w2=Math.max(20,18+g*28), h2=Math.max(14,12+g*18);
     const soilG=ctx.createRadialGradient(cx2,cy2,0,cx2,cy2,w2);
     soilG.addColorStop(0,'#6d4c41'); soilG.addColorStop(1,'#4e342e');
     ctx.beginPath(); ctx.ellipse(cx2,cy2,w2,h2*0.35,0,0,Math.PI*2);
     ctx.fillStyle=soilG; ctx.fill();
-    // grass/moss rim
     if(stage>=1){
       ctx.beginPath(); ctx.ellipse(cx2,cy2,w2,h2*0.35,0,0,Math.PI);
       ctx.strokeStyle='#66bb6a'; ctx.lineWidth=3; ctx.stroke();
     }
-    // pot body (only drawn at early stages — tree dwarfs it later)
     if(g<0.5){
       const potW=w2*1.1, potH=h2*1.8;
       const pg=ctx.createLinearGradient(cx2-potW,cy2,cx2+potW,cy2+potH);
@@ -4039,29 +4109,131 @@ function initPlant(){
 
   function generateBlooms(){
     blooms.length=0;
-    const count = 12 + Math.floor(Math.random()*10);
+    const rng=makeRng(treeSeed+1);
+    const count=12+Math.floor(rng()*10);
     for(let i=0;i<count;i++){
-      blooms.push({
-        offX: (Math.random()-0.5)*2,
-        offY: Math.random(),
-        size: 5+Math.random()*9,
-        hue:  300+Math.random()*60,    // pink-purple
-        petalCount: 5+Math.floor(Math.random()*3),
-      });
+      blooms.push({offX:(rng()-0.5)*2,offY:rng(),size:5+rng()*9,hue:300+rng()*60,petalCount:5+Math.floor(rng()*3)});
     }
   }
 
-  // ── Water droplet particles ──
-  function spawnDrop(x,y){
-    drops.push({
-      x, y,
-      vx:(Math.random()-0.5)*60,
-      vy:-60-Math.random()*80,
-      r:2+Math.random()*3,
-      life:1, decay:1.4+Math.random()*0.8,
+  // ── Season effects ──
+  function updateSeasonEffects(dt){
+    if(season===2){
+      if(Math.random()<dt*2 && branchTips.length>0){
+        const tip=branchTips[Math.floor(Math.random()*branchTips.length)];
+        leafFall.push({x:tip.x,y:tip.y,vx:(Math.random()-0.5)*25,vy:0,rot:Math.random()*Math.PI*2,rotV:(Math.random()-0.5)*2.5,life:1,hue:15+Math.floor(Math.random()*35)});
+      }
+    }
+    const groundY=H()-H()*0.08;
+    for(let i=leafFall.length-1;i>=0;i--){
+      const l=leafFall[i];
+      l.vy+=60*dt; l.x+=l.vx*dt; l.y+=l.vy*dt; l.rot+=l.rotV*dt;
+      if(l.y>groundY){ leafFall.splice(i,1); continue; }
+      ctx.save(); ctx.translate(l.x,l.y); ctx.rotate(l.rot); ctx.globalAlpha=0.85;
+      ctx.beginPath(); ctx.ellipse(0,0,5,3,0,0,Math.PI*2);
+      ctx.fillStyle=`hsl(${l.hue},80%,45%)`; ctx.fill();
+      ctx.restore(); ctx.globalAlpha=1;
+    }
+    if(season===3){
+      if(Math.random()<dt*8) snowflakes.push({x:Math.random()*W(),y:0,vx:(Math.random()-0.5)*20,vy:30+Math.random()*40,r:1.5+Math.random()*2.5});
+      const gY=H()-H()*0.08;
+      for(let i=snowflakes.length-1;i>=0;i--){
+        const s=snowflakes[i];
+        s.x+=s.vx*dt; s.y+=s.vy*dt;
+        if(s.y>gY){ snowflakes.splice(i,1); continue; }
+        ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+        ctx.fillStyle='rgba(220,235,255,0.85)'; ctx.fill();
+      }
+    }
+  }
+
+  // ── Bird ──
+  function updateBird(dt){
+    if(!seasonUnlocked || getStage(growth)<3) return;
+    bird.nextVisit-=dt;
+    if(!bird.active && bird.nextVisit<=0 && branchTips.length>0){
+      const tip=branchTips[Math.floor(Math.random()*branchTips.length)];
+      bird.perchX=tip.x; bird.perchY=tip.y;
+      bird.x=Math.random()<0.5?-20:W()+20;
+      bird.y=tip.y-20+Math.random()*20;
+      bird.dir=bird.x<0?1:-1;
+      bird.active=true; bird.state='flying'; bird.t=0;
+    }
+    if(!bird.active) return;
+    bird.t+=dt; bird.wingPhase+=dt*8;
+    if(bird.state==='flying'){
+      const dx=bird.perchX-bird.x, dy=bird.perchY-bird.y, dist=Math.hypot(dx,dy);
+      const spd=Math.min(180,dist*3);
+      bird.x+=dx/dist*spd*dt; bird.y+=dy/dist*spd*dt;
+      if(dist<8){ bird.state='perched'; bird.t=0; bird.x=bird.perchX; bird.y=bird.perchY; birdChirp(); birdChirpT=4+Math.random()*6; }
+    } else if(bird.state==='perched'){
+      birdChirpT-=dt;
+      if(birdChirpT<=0){ birdChirp(); birdChirpT=4+Math.random()*6; }
+      if(bird.t>8+Math.random()*10){ bird.state='leaving'; bird.t=0; }
+    } else {
+      bird.x+=bird.dir*120*dt; bird.y-=40*dt;
+      if(bird.x<-40||bird.x>W()+40){ bird.active=false; bird.nextVisit=15+Math.random()*20; }
+    }
+    // draw
+    const {x,y,state,wingPhase,dir}=bird;
+    const flap=state==='perched'?0.15:0.6;
+    const wFlap=Math.sin(wingPhase)*flap;
+    ctx.save(); ctx.translate(x,y); if(dir<0) ctx.scale(-1,1);
+    ctx.beginPath(); ctx.ellipse(0,0,6,4,0,0,Math.PI*2); ctx.fillStyle='#5d4037'; ctx.fill();
+    ctx.beginPath(); ctx.arc(-4,-3,3.5,0,Math.PI*2); ctx.fillStyle='#4e342e'; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-7,-3); ctx.lineTo(-11,-2.5); ctx.lineTo(-7,-1.5); ctx.fillStyle='#ffa726'; ctx.fill();
+    ctx.beginPath(); ctx.arc(-5,-4,1,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+    ctx.beginPath(); ctx.arc(-5.3,-4,0.5,0,Math.PI*2); ctx.fillStyle='#111'; ctx.fill();
+    ctx.save(); ctx.rotate(-wFlap);
+    ctx.beginPath(); ctx.ellipse(-1,-2,9,3,0.3,0,Math.PI*2); ctx.fillStyle='#795548'; ctx.fill();
+    ctx.restore(); ctx.restore();
+  }
+
+  // ── Butterflies ──
+  const bflies=[{x:0.2,y:0.35,vx:0.06,phase:0},{x:0.7,y:0.25,vx:-0.04,phase:1.5},{x:0.5,y:0.4,vx:0.03,phase:3}];
+  let bfTime=0;
+  function drawButterflies(){
+    const w=W(),h=H(),groundY=h-h*0.08;
+    bflies.forEach(b=>{
+      b.x+=b.vx*0.003; if(b.x<0.05||b.x>0.95) b.vx*=-1;
+      const bx=b.x*w, by=b.y*groundY;
+      const flapW=Math.abs(Math.sin(bfTime*4+b.phase))*12+4;
+      ctx.save(); ctx.translate(bx,by);
+      ctx.beginPath(); ctx.ellipse(-flapW/2-2,-4,flapW/2,5,0.3,0,Math.PI*2); ctx.fillStyle='rgba(255,152,0,0.7)'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(flapW/2+2,-4,flapW/2,5,-0.3,0,Math.PI*2); ctx.fillStyle='rgba(255,152,0,0.7)'; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0,0,2,5,0,0,Math.PI*2); ctx.fillStyle='#5d4037'; ctx.fill();
+      ctx.restore();
     });
   }
 
+  // ── Background ──
+  function drawBg(){
+    const w=W(),h=H(),s=getStage(growth);
+    const skies={grow:[['#e3f2fd','#f1f8e9'],['#e3f2fd','#e8f5e9'],['#c8e6c9','#dcedc8'],['#a5d6a7','#c5e1a5'],['#81c784','#aed581']],0:['#c8e6c9','#dcedc8'],1:['#80deea','#b2ebf2'],2:['#ffccbc','#ffe0b2'],3:['#cfd8dc','#eceff1']};
+    const [top,bot]=seasonUnlocked?skies[season]:skies.grow[s];
+    const grad=ctx.createLinearGradient(0,0,0,h);
+    grad.addColorStop(0,top); grad.addColorStop(1,bot);
+    ctx.fillStyle=grad; ctx.fillRect(0,0,w,h);
+    ctx.beginPath(); ctx.arc(w*(season===3?0.75:0.82),h*0.12,season===3?18:22,0,Math.PI*2);
+    ctx.fillStyle=season===3?'rgba(240,248,255,0.7)':season===2?'rgba(255,180,50,0.6)':'rgba(255,236,64,0.55)'; ctx.fill();
+    const groundY=h-h*0.08;
+    const gcs=['#81c784','#4caf50','#8d6e63','#e0e0e0'];
+    const gbs=['#388e3c','#2e7d32','#5d4037','#bdbdbd'];
+    const gi=seasonUnlocked?season:0;
+    const gg=ctx.createLinearGradient(0,groundY,0,h);
+    gg.addColorStop(0,gcs[gi]); gg.addColorStop(1,gbs[gi]);
+    ctx.fillStyle=gg; ctx.fillRect(0,groundY,w,h-groundY+2);
+    if(seasonUnlocked){
+      ctx.font=`bold ${Math.max(11,Math.min(w,h)*0.030)}px Nunito,sans-serif`;
+      ctx.fillStyle='rgba(80,60,40,0.35)'; ctx.textAlign='right';
+      ctx.fillText(SEASON_NAMES[season],w-12,h*0.08);
+      ctx.textAlign='left';
+    }
+    if(s>=4 && (!seasonUnlocked||season===0||season===1)) drawButterflies();
+  }
+
+  // ── Water drops ──
+  function spawnDrop(x,y){ drops.push({x,y,vx:(Math.random()-0.5)*60,vy:-60-Math.random()*80,r:2+Math.random()*3,life:1,decay:1.4+Math.random()*0.8}); }
   function updateDrawDrops(dt){
     for(let i=drops.length-1;i>=0;i--){
       const d=drops[i];
@@ -4072,134 +4244,71 @@ function initPlant(){
     }
   }
 
-  // ── Background ──
-  function drawBg(g){
-    const w=W(),h=H();
-    const stage=getStage(g);
-    // sky shifts from light to deeper blue-green as tree matures
-    const skyTop=['#e3f2fd','#e3f2fd','#c8e6c9','#a5d6a7','#81c784'][stage];
-    const skyBot=['#f1f8e9','#e8f5e9','#dcedc8','#c5e1a5','#aed581'][stage];
-    const grad=ctx.createLinearGradient(0,0,0,h);
-    grad.addColorStop(0,skyTop); grad.addColorStop(1,skyBot);
-    ctx.fillStyle=grad; ctx.fillRect(0,0,w,h);
-    // sun
-    const sunAlpha=0.35+stage*0.12;
-    ctx.beginPath(); ctx.arc(w*0.82,h*0.12,22,0,Math.PI*2);
-    ctx.fillStyle=`rgba(255,236,64,${sunAlpha})`; ctx.fill();
-    // ground
-    const groundY=h - h*0.08;
-    const gg=ctx.createLinearGradient(0,groundY,0,h);
-    gg.addColorStop(0,'#81c784'); gg.addColorStop(1,'#388e3c');
-    ctx.fillStyle=gg; ctx.fillRect(0,groundY,w,h-groundY+2);
-    // butterflies at bloom stage
-    if(stage>=4){
-      drawButterflies(g);
-    }
-  }
-
-  // simple butterfly sprites
-  const bflies=[
-    {x:0.2,y:0.35,vx:0.06,phase:0},{x:0.7,y:0.25,vx:-0.04,phase:1.5},
-    {x:0.5,y:0.4,vx:0.03,phase:3},
-  ];
-  let bfTime=0;
-  function drawButterflies(g){
-    const w=W(),h=H(),groundY=h-h*0.08;
-    bflies.forEach(b=>{
-      b.x+=b.vx*0.003; if(b.x<0.05||b.x>0.95) b.vx*=-1;
-      const bx=b.x*w, by=b.y*groundY;
-      const flapW=Math.abs(Math.sin(bfTime*4+b.phase))*12+4;
-      ctx.save(); ctx.translate(bx,by);
-      ctx.beginPath(); ctx.ellipse(-flapW/2-2,-4,flapW/2,5,0.3,0,Math.PI*2);
-      ctx.fillStyle='rgba(255,152,0,0.7)'; ctx.fill();
-      ctx.beginPath(); ctx.ellipse(flapW/2+2,-4,flapW/2,5,-0.3,0,Math.PI*2);
-      ctx.fillStyle='rgba(255,152,0,0.7)'; ctx.fill();
-      ctx.beginPath(); ctx.ellipse(0,0,2,5,0,0,Math.PI*2);
-      ctx.fillStyle='#5d4037'; ctx.fill();
-      ctx.restore();
-    });
-  }
-
-  // ── Cursor (watering can pointer) ──
+  // ── Cursor ──
   function drawCursor(){
     if(activeGame!=='plant') return;
     ctx.save(); ctx.translate(mouseX,mouseY);
-    // spout
-    ctx.beginPath(); ctx.moveTo(-8,0); ctx.lineTo(-18,8);
-    ctx.strokeStyle='rgba(2,136,209,0.7)'; ctx.lineWidth=2.5; ctx.lineCap='round'; ctx.stroke();
-    // can body
-    ctx.beginPath(); ctx.roundRect(-4,-10,20,14,4);
-    ctx.fillStyle='rgba(79,195,247,0.55)'; ctx.fill();
-    ctx.strokeStyle='rgba(2,136,209,0.8)'; ctx.lineWidth=1.5; ctx.stroke();
-    // handle arc
-    ctx.beginPath(); ctx.arc(12,-6,7,Math.PI*0.1,Math.PI*1.1);
-    ctx.strokeStyle='rgba(2,136,209,0.7)'; ctx.lineWidth=2; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-8,0); ctx.lineTo(-18,8); ctx.strokeStyle='rgba(2,136,209,0.7)'; ctx.lineWidth=2.5; ctx.lineCap='round'; ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(-4,-10,20,14,4); ctx.fillStyle='rgba(79,195,247,0.55)'; ctx.fill(); ctx.strokeStyle='rgba(2,136,209,0.8)'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(12,-6,7,Math.PI*0.1,Math.PI*1.1); ctx.strokeStyle='rgba(2,136,209,0.7)'; ctx.lineWidth=2; ctx.stroke();
     ctx.restore();
   }
 
   // ── Input ──
-  cv.addEventListener('mousemove',e=>{
-    const r=cv.getBoundingClientRect(); mouseX=e.clientX-r.left; mouseY=e.clientY-r.top;
-  });
-  cv.addEventListener('touchmove',e=>{
-    e.preventDefault();
-    const r=cv.getBoundingClientRect(); mouseX=e.touches[0].clientX-r.left; mouseY=e.touches[0].clientY-r.top;
-  },{passive:false});
+  cv.addEventListener('mousemove',e=>{ const r=cv.getBoundingClientRect(); mouseX=e.clientX-r.left; mouseY=e.clientY-r.top; });
+  cv.addEventListener('touchmove',e=>{ e.preventDefault(); const r=cv.getBoundingClientRect(); mouseX=e.touches[0].clientX-r.left; mouseY=e.touches[0].clientY-r.top; },{passive:false});
 
   let waterSoundTimer=0;
   function doWater(dt){
-    water = Math.min(1, water + dt*0.55);
-    const growRate = 0.012 * dt * (0.5 + water*0.8);
+    water=Math.min(1,water+dt*0.55);
+    const growRate=0.012*dt*(0.5+water*0.8);
     const prevStage=getStage(growth);
-    growth = Math.min(1, growth + growRate);
+    growth=Math.min(1,growth+growRate);
     const newStage=getStage(growth);
     if(newStage!==prevStage){
       stageEl.textContent=STAGE_NAMES[newStage];
-      if(newStage===4 && !bloomsGenerated){ generateBlooms(); bloomsGenerated=true; bloomChime(); }
+      if(newStage===4 && !bloomsGenerated){ treeFixed=true; generateBlooms(); bloomsGenerated=true; bloomChime(); }
     }
-    // spawn drop particles near cursor
-    if(Math.random()<0.35) spawnDrop(mouseX+(-4+Math.random()*8), mouseY+10);
-    // water drop sound every ~0.3s
+    if(Math.random()<0.35) spawnDrop(mouseX+(-4+Math.random()*8),mouseY+10);
     waterSoundTimer-=dt;
     if(waterSoundTimer<=0){ waterDrop(); waterSoundTimer=0.18+Math.random()*0.14; }
     hint.style.opacity='0';
   }
 
-  waterBtn.addEventListener('pointerdown', e=>{ watering=true; e.preventDefault(); });
-  window.addEventListener('pointerup', ()=>{ watering=false; });
-  cv.addEventListener('pointerdown', ()=>{ watering=true; });
-
-  // touch
-  waterBtn.addEventListener('touchstart', e=>{ watering=true; e.preventDefault(); },{passive:false});
-  window.addEventListener('touchend', ()=>{ watering=false; });
+  waterBtn.addEventListener('pointerdown',e=>{ watering=true; e.preventDefault(); });
+  window.addEventListener('pointerup',()=>{ watering=false; });
+  cv.addEventListener('pointerdown',()=>{ watering=true; });
+  waterBtn.addEventListener('touchstart',e=>{ watering=true; e.preventDefault(); },{passive:false});
+  window.addEventListener('touchend',()=>{ watering=false; });
 
   // ── Main loop ──
-  let plLast=performance.now(), plTime=0;
+  let plLast=performance.now();
   function plLoop(ts){
     if(activeGame!=='plant'){ requestAnimationFrame(plLoop); return; }
-    const dt=Math.min((ts-plLast)/1000,0.05); plLast=ts; plTime+=dt; bfTime+=dt;
+    const dt=Math.min((ts-plLast)/1000,0.05); plLast=ts; bfTime+=dt;
 
-    // water decay
-    if(watering){
-      doWater(dt);
+    if(watering) doWater(dt);
+    else water=Math.max(0,water-dt*0.18);
+
+    if(water<0.05) wilt=Math.min(1,wilt+dt*0.06);
+    else           wilt=Math.max(0,wilt-dt*0.22);
+
+    if(growth>=1 && !seasonUnlocked){ seasonUnlocked=true; season=0; seasonT=0; }
+    if(seasonUnlocked){
+      seasonT+=dt;
+      if(seasonT>=SEASON_DUR){ season=(season+1)%4; seasonT=0; leafFall.length=0; snowflakes.length=0; if(season===3) windSound(); }
+      stageEl.textContent=SEASON_NAMES[season];
     } else {
-      water=Math.max(0, water - dt*0.18);
-    }
-    // wilt: increases slowly when water==0, recovers when watered
-    if(water<0.05){
-      wilt=Math.min(1, wilt+dt*0.06);
-    } else {
-      wilt=Math.max(0, wilt-dt*0.22);
+      stageEl.textContent=STAGE_NAMES[getStage(growth)];
     }
 
-    // update water bar UI
     barEl.style.width=(water*100)+'%';
-    stageEl.textContent=STAGE_NAMES[getStage(growth)];
 
-    // ── Draw ──
     ctx.clearRect(0,0,W(),H());
-    drawBg(growth);
-    drawTree(growth, wilt);
+    drawBg();
+    drawTree(growth,wilt);
+    updateSeasonEffects(dt);
+    updateBird(dt);
     updateDrawDrops(dt);
     drawCursor();
 
@@ -4207,6 +4316,7 @@ function initPlant(){
   }
   requestAnimationFrame(plLoop);
 }
+
 
 
 /* ══════════════════════════════════════════════════════════
