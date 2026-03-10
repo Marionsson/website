@@ -1419,20 +1419,39 @@ function initKetchup(){
         s.connect(hp); hp.connect(g); g.connect(master); s.start();
         ambientNode=s;
       } else if(phase===1){
-        // dusk: low warm hum + faint cricket start
-        const o=ac.createOscillator(); o.type='sine'; o.frequency.value=130;
-        const g=ac.createGain(); g.gain.value=0.06;
-        o.connect(g); g.connect(master); o.start();
-        ambientNode=o;
+        // dusk: warm filtered noise — like evening air settling, no harsh tone
+        const sr=ac.sampleRate, dur=3, buf=ac.createBuffer(1,sr*dur,sr);
+        const d=buf.getChannelData(0); let b0=0,b1=0,b2=0;
+        for(let i=0;i<d.length;i++){
+          const w=Math.random()*2-1;
+          b0=0.99886*b0+w*0.0555179; b1=0.99332*b1+w*0.0750759; b2=0.96900*b2+w*0.1538520;
+          d[i]=(b0+b1+b2)*0.12;
+        }
+        const s=ac.createBufferSource(); s.buffer=buf; s.loop=true;
+        // low-pass to keep it warm and muffled, no harsh highs
+        const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=320;
+        const g=ac.createGain(); g.gain.value=0.10;
+        s.connect(lp); lp.connect(g); g.connect(master); s.start();
+        ambientNode=s;
       } else if(phase===2){
-        // night: cricket loop — high square wave LFO-chopped
-        const o=ac.createOscillator(); o.type='sine'; o.frequency.value=3200;
-        const lfo=ac.createOscillator(); lfo.type='square'; lfo.frequency.value=16;
-        const lg=ac.createGain(); lg.gain.value=0.05;
-        lfo.connect(lg); lg.connect(o.frequency);
-        const g=ac.createGain(); g.gain.value=0.04;
-        o.connect(g); g.connect(master); o.start(); lfo.start();
-        ambientNode=o;
+        // night: soft cricket ambience — filtered noise rhythmically gated at ~4Hz
+        // sounds like a gentle background cricket chorus, not a harsh beep
+        const sr=ac.sampleRate, dur=2, buf=ac.createBuffer(1,sr*dur,sr);
+        const d=buf.getChannelData(0);
+        for(let i=0;i<d.length;i++){
+          // pink-ish noise with chirp rhythm envelope (~4 chirps/sec)
+          const env=Math.max(0,Math.sin(i/sr*Math.PI*8));  // 4Hz gate, smooth
+          d[i]=(Math.random()*2-1)*env*0.4;
+        }
+        const s=ac.createBufferSource(); s.buffer=buf; s.loop=true;
+        // bandpass around cricket frequency range — 2400Hz gives natural chirp timbre
+        const bp=ac.createBiquadFilter(); bp.type='bandpass';
+        bp.frequency.value=2400; bp.Q.value=8;
+        // gentle low-pass to soften any harshness
+        const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=3200;
+        const g=ac.createGain(); g.gain.value=0.18;
+        s.connect(bp); bp.connect(lp); lp.connect(g); g.connect(master); s.start();
+        ambientNode=s;
       } else if(phase===3){
         // dawn: soft filtered noise like wind through reeds
         const sr=ac.sampleRate, buf=ac.createBuffer(1,sr*2,sr);
