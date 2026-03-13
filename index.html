@@ -378,6 +378,8 @@ body {
 }
 .pz-topping-btn:hover { background:rgba(255,255,255,0.22); transform:scale(1.06); }
 .pz-topping-btn:active { transform:scale(0.94); }
+.pz-reset-btn { background:rgba(180,60,30,0.18) !important; border-color:rgba(220,80,40,0.35) !important; color:rgba(255,160,120,0.9) !important; }
+.pz-reset-btn:hover { background:rgba(220,80,40,0.30) !important; }
 #pz-canvas { display:block; touch-action:none; }
 #pz-hint {
   position:absolute; bottom:24px; left:50%; transform:translateX(-50%);
@@ -3371,7 +3373,7 @@ function initPizza(){
 
   // ── Toppings definition ──
   const TOPPINGS = [
-    { id:'sauce',    label:'🍅 Sauce',    color:'#c0392b', r:10, kind:'brush'  },
+    { id:'sauce',    label:'🍅 Sauce',    color:'#c0392b', r:13, kind:'brush'  },
     { id:'cheese',   label:'🧀 Cheese',   color:'#f5d60a', r:9,  kind:'brush'  },
     { id:'mushroom', label:'🍄 Mushroom', color:'#8B6914', r:10, kind:'item'   },
     { id:'olive',    label:'🫒 Olive',    color:'#2e7d32', r:7,  kind:'item'   },
@@ -3425,6 +3427,22 @@ function initPizza(){
     });
     topbar.appendChild(btn);
   });
+
+  // Reset button
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'pz-topping-btn pz-reset-btn';
+  resetBtn.textContent = '🔄 Reset';
+  resetBtn.addEventListener('click', () => {
+    if(baking || sliding) return;
+    baked=false; bakeColor=0; bakeT=0;
+    placed=[]; saucePts=[]; cheesePts=[];
+    slices=[]; steamPuffs=[]; cuttingMode=false;
+    selectedId=null;
+    topbar.querySelectorAll('.pz-topping-btn').forEach(b=>{ b.style.background=''; b.style.outline=''; });
+    hint.textContent='drag toppings onto the pizza · slide right to bake 🍕';
+    hint.style.opacity='1';
+  });
+  topbar.appendChild(resetBtn);
 
   // Deselect on Escape
   window.addEventListener('keydown', e => { if(e.key==='Escape'||e.key==='Esc') deselect(); });
