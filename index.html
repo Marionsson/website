@@ -2493,6 +2493,11 @@ function initNils(){
   let score=0, bonusPopups=[];
   let nearMissTracked=new Set(); // obstacle ids we've already given near-miss bonus
 
+  // Spettekaka
+  let spettekaka=null, spetteTimer=12+Math.random()*10;
+  let speedBoostT=0, BOOST_DUR=5, BOOST_SPD=80;
+  let boostFlashT=0;
+
   // Obstacles pool
   let obstacles=[], obstacleId=0;
   let spawnTimer=0, spawnInterval=1.4;
@@ -2521,6 +2526,13 @@ function initNils(){
     birdFlocks.push({ x:W()+80, y, birds, spd:55+Math.random()*30, passed:false, id:obstacleId++ });
   }
 
+  function spawnSpettekaka(){
+    // Spettekaka: a tall conical Skåne cake, flies across mid-height
+    const y=H()*0.18+Math.random()*H()*0.45;
+    const fromLeft=Math.random()<0.5;
+    spettekaka={ x:fromLeft?-40:W()+40, y, vy:(Math.random()-0.5)*30, spd:fromLeft?90:90, dir:fromLeft?1:-1, rot:0, caught:false };
+  }
+
   function spawnObstacle(){
     const h=H(), types=['windmill','windmill','church','church','house'];
     const t=types[Math.floor(Math.random()*types.length)];
@@ -2533,10 +2545,22 @@ function initNils(){
     } else if(t==='topflock'){
       // A flock at upper portion of screen — forces you to fly low
       const fy=H()*0.08+Math.random()*H()*0.30;
-      const count=6+Math.floor(Math.random()*6);
+      const count=8+Math.floor(Math.random()*8);
       const bds=[];
-      for(let i=0;i<count;i++) bds.push({ox:(Math.random()-0.5)*80,oy:(Math.random()-0.5)*40,wingT:Math.random()*Math.PI*2});
+      for(let i=0;i<count;i++) bds.push({ox:(Math.random()-0.5)*130,oy:(Math.random()-0.5)*55,wingT:Math.random()*Math.PI*2});
       obstacles.push({type:'topflock',id:obstacleId++,x:W()+90,y:fy,birds:bds,passed:false,nearMissGiven:false});
+    } else if(t==='diver'){
+      // A single large bird that swoops diagonally across the play area
+      const fromTop=Math.random()<0.5;
+      const startY=fromTop?H()*0.05:H()*0.55, endY=fromTop?H()*0.55:H()*0.08;
+      obstacles.push({type:'diver',id:obstacleId++,x:W()+30,startY,endY,passed:false,nearMissGiven:false});
+    } else if(t==='midbird'){
+      // A tight cluster of birds right in the middle height zone
+      const my=H()*0.25+Math.random()*H()*0.35;
+      const count=5+Math.floor(Math.random()*5);
+      const bds=[];
+      for(let i=0;i<count;i++) bds.push({ox:(Math.random()-0.5)*60,oy:(Math.random()-0.5)*35,wingT:Math.random()*Math.PI*2});
+      obstacles.push({type:'midbird',id:obstacleId++,x:W()+60,y:my,birds:bds,passed:false,nearMissGiven:false});
     } else {
       obstacles.push({ type:'house', id:obstacleId++, x:W()+55, y:ground, passed:false, nearMissGiven:false });
     }
@@ -2585,9 +2609,17 @@ function initNils(){
         if(box.circle){ const dx=bx-box.circle.cx, dy=by-box.circle.cy; if(dx*dx+dy*dy<(br+box.circle.r)**2) return true; }
       }
     }
-    // Obstacle top-flocks
+    // Diver birds
     for(const ob of obstacles){
-      if(ob.type!=='topflock'||ob.passed) continue;
+      if(ob.type!=='diver'||ob.passed) continue;
+      const prog=Math.max(0,Math.min(1,(W()+30-ob.x)/(W()+30)));
+      const cy=ob.startY+(ob.endY-ob.startY)*prog;
+      const dx=bx-ob.x, dy=by-cy;
+      if(dx*dx+dy*dy<(br+18)**2) return true;
+    }
+    // Obstacle top-flocks and midbirds
+    for(const ob of obstacles){
+      if((ob.type!=='topflock'&&ob.type!=='midbird')||ob.passed) continue;
       for(const b of ob.birds){
         const dx=bx-(ob.x+b.ox), dy=by-(ob.y+b.oy);
         if(dx*dx+dy*dy<(br+14)**2) return true;
@@ -2777,6 +2809,153 @@ function initNils(){
     });
   }
 
+  function drawSpettekaka(s){
+    ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(s.rot);
+    // Real spettekaka: tall hollow tapered cone, pale golden-brown,
+    // covered in irregular drip-holes baked into the surface.
+    // Base ~28px wide, top ~10px wide, total height ~90px.
+    const TH=90, BW=28, TW=10, segs=18;
+    // Use a seeded-ish deterministic hole pattern
+    const holeRng=(function(){ let x=42; return ()=>{ x=(x*16807)%2147483647; return (x-1)/2147483646; }; })();
+
+    // ── Body as trapezoid filled with gradient ──
+    const bodyGrad=ctx.createLinearGradient(-BW,-TH,BW,0);
+    bodyGrad.addColorStop(0,'#c8861a');
+    bodyGrad.addColorStop(0.3,'#e8a832');
+    bodyGrad.addColorStop(0.55,'#f0c060');
+    bodyGrad.addColorStop(0.75,'#e8a832');
+    bodyGrad.addColorStop(1,'#c07010');
+
+    // Draw cone sides as a clipping trapezoid
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(-BW, 0);
+    ctx.lineTo(-TW, -TH);
+    ctx.lineTo( TW, -TH);
+    ctx.lineTo( BW, 0);
+    ctx.closePath();
+    ctx.fillStyle=bodyGrad;
+    ctx.fill();
+
+    // Horizontal drip-ring lines across the cone
+    ctx.clip();
+    ctx.strokeStyle='rgba(120,60,0,0.18)';
+    ctx.lineWidth=1;
+    for(let i=1;i<segs;i++){
+      const t2=i/segs, y2=-TH*t2;
+      const hw=BW+(TW-BW)*t2; // width at this height
+      ctx.beginPath(); ctx.moveTo(-hw,y2); ctx.lineTo(hw,y2); ctx.stroke();
+    }
+
+    // Irregular holes — the signature look of spettekaka
+    // Holes are punched through, revealing darker interior
+    for(let i=0;i<38;i++){
+      const t2=0.05+holeRng()*0.88;
+      const y2=-TH*t2;
+      const hw=(BW+(TW-BW)*t2)*0.82;
+      const hx2=(holeRng()-0.5)*2*hw;
+      const hr=1.2+holeRng()*3.5;
+      // Only draw hole if it fits within cone width
+      if(Math.abs(hx2)+hr < hw){
+        ctx.beginPath(); ctx.arc(hx2, y2, hr, 0, Math.PI*2);
+        ctx.fillStyle=`rgba(90,40,0,${0.45+holeRng()*0.35})`;
+        ctx.fill();
+      }
+    }
+
+    // Vertical drip streaks
+    ctx.strokeStyle='rgba(160,80,0,0.2)';
+    ctx.lineWidth=1.5;
+    for(let i=0;i<6;i++){
+      const xfrac=(holeRng()-0.5)*1.4;
+      const t2s=0.1+holeRng()*0.4, t2e=t2s+0.15+holeRng()*0.3;
+      const ys=-TH*t2s, ye=-TH*Math.min(t2e,0.95);
+      const xw=BW+(TW-BW)*(t2s+t2e)/2;
+      const hx2=xfrac*xw*0.7;
+      ctx.beginPath(); ctx.moveTo(hx2,ys); ctx.lineTo(hx2+(holeRng()-0.5)*4,ye); ctx.stroke();
+    }
+    ctx.restore(); // unclip
+
+    // ── Outline ──
+    ctx.beginPath();
+    ctx.moveTo(-BW, 0); ctx.lineTo(-TW, -TH); ctx.lineTo(TW, -TH); ctx.lineTo(BW, 0);
+    ctx.closePath();
+    ctx.strokeStyle='#8a5010'; ctx.lineWidth=1.5; ctx.stroke();
+
+    // ── Flat top ellipse (hollow look) ──
+    ctx.beginPath(); ctx.ellipse(0,-TH,TW,TW*0.4,0,0,Math.PI*2);
+    ctx.fillStyle='#6a3a08'; ctx.fill();
+    ctx.strokeStyle='#8a5010'; ctx.lineWidth=1; ctx.stroke();
+    // Inner lighter ring
+    ctx.beginPath(); ctx.ellipse(0,-TH,TW*0.5,TW*0.2,0,0,Math.PI*2);
+    ctx.fillStyle='#c07030'; ctx.fill();
+
+    // ── Base ellipse ──
+    ctx.beginPath(); ctx.ellipse(0,0,BW,BW*0.3,0,0,Math.PI*2);
+    ctx.fillStyle='#b86818'; ctx.fill();
+    ctx.strokeStyle='#7a4008'; ctx.lineWidth=1.5; ctx.stroke();
+
+    // ── Shimmer sparkles (it's a prize!) ──
+    const t=performance.now()/350;
+    for(let i=0;i<5;i++){
+      const a=t*1.2+i*Math.PI*2/5;
+      const sr=30+Math.sin(t+i)*5;
+      const sx=Math.cos(a)*sr, sy=-TH*0.5+Math.sin(a*0.7)*18;
+      const sa=0.4+0.5*Math.sin(t*2+i);
+      ctx.save();
+      ctx.translate(sx,sy);
+      ctx.rotate(t+i);
+      ctx.fillStyle=`rgba(255,230,100,${sa})`;
+      // 4-point star
+      for(let p=0;p<4;p++){
+        const pa=p*Math.PI/2;
+        ctx.beginPath();
+        ctx.moveTo(0,0);
+        ctx.lineTo(Math.cos(pa)*5,Math.sin(pa)*5);
+        ctx.lineTo(Math.cos(pa+Math.PI/4)*2,Math.sin(pa+Math.PI/4)*2);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function drawDiverBird(x,y){
+    ctx.save(); ctx.translate(x,y);
+    // Big stork-like bird, bigger hitbox
+    ctx.fillStyle='#222';
+    ctx.beginPath(); ctx.ellipse(0,0,14,6,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-12,0,5,0,Math.PI*2); ctx.fill();
+    // Long beak
+    ctx.fillStyle='#e8a030';
+    ctx.beginPath(); ctx.moveTo(-16,-1); ctx.lineTo(-28,0); ctx.lineTo(-16,2); ctx.closePath(); ctx.fill();
+    // Eye
+    ctx.beginPath(); ctx.arc(-13,-1,1.5,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+    // Wings spread
+    const flap=Math.sin(performance.now()/120)*14;
+    ctx.fillStyle='#333';
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-10,flap); ctx.lineTo(-20,flap*0.6); ctx.lineTo(-8,0); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-10,-flap); ctx.lineTo(-20,-flap*0.6); ctx.lineTo(-8,0); ctx.closePath(); ctx.fill();
+    // Long legs trailing
+    ctx.strokeStyle='#555'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(8,4); ctx.lineTo(16,18); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(4,4); ctx.lineTo(12,18); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawBoostHud(){
+    if(speedBoostT<=0) return;
+    const pct=speedBoostT/BOOST_DUR;
+    const w2=100, bx=(W()-w2)/2, by=8;
+    ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.roundRect(bx,by,w2,10,5); ctx.fill();
+    const grad=ctx.createLinearGradient(bx,0,bx+w2*pct,0);
+    grad.addColorStop(0,'#f9e04b'); grad.addColorStop(1,'#ffaa00');
+    ctx.fillStyle=grad; ctx.beginPath(); ctx.roundRect(bx,by,w2*pct,10,5); ctx.fill();
+    ctx.font='bold 11px Nunito,sans-serif'; ctx.fillStyle='#fff'; ctx.textAlign='center';
+    ctx.fillText('🍰 Spettekaka! +fart',W()/2,by+22); ctx.textAlign='left';
+  }
+
   function drawGooseAndNils(gx,gy,gr,rec,recT,nox,noy,nspin){
     if(rec){
       const t=recT/RECOVER_DUR; // 0..1
@@ -2913,27 +3092,45 @@ function initNils(){
         nilsOffX += 85*dt; nilsOffY += (recoverT<RECOVER_DUR*0.25?-120:200)*dt; nilsSpin+=7*dt;
       }
       // Phase 2: hold position, arc handled in draw
-      if(recoverT>=RECOVER_DUR){ recovering=false; bird.vy=0; nilsOffX=0; nilsOffY=0; nilsSpin=0; }
+      if(recoverT>=RECOVER_DUR){ recovering=false; bird.vy=-340; bird.y=Math.min(bird.y, H()-H()*0.14-235); nilsOffX=0; nilsOffY=0; nilsSpin=0; }
     }
 
     // ── Score & speed ──
     if(!recovering){ dist+=speed*dt; score=Math.floor(dist); speed=Math.min(260,120+dist*0.025); }
+    if(speedBoostT>0){ speedBoostT-=dt; boostFlashT+=dt; if(speedBoostT<=0){ speedBoostT=0; } }
     scoreEl.textContent=score+'m över Skåne';
 
     // ── Spawn ──
     cloudTimer-=dt; if(cloudTimer<=0){ spawnCloud(); cloudTimer=2+Math.random()*3; }
     bgTimer-=dt; if(bgTimer<=0){ spawnBgElement(); bgTimer=3+Math.random()*3; }
-    birdTimer-=dt; if(birdTimer<=0){ spawnBirdFlock(); birdTimer=6+Math.random()*8; }
+    birdTimer-=dt; if(birdTimer<=0){ spawnBirdFlock(); birdTimer=3+Math.random()*4; }
+    spetteTimer-=dt; if(spetteTimer<=0&&!spettekaka){ spawnSpettekaka(); spetteTimer=12+Math.random()*10; }
     spawnTimer-=dt; spawnInterval=Math.max(0.9,1.4-dist*0.001);
     if(spawnTimer<=0){ spawnObstacle(); spawnTimer=spawnInterval+Math.random()*0.6; }
 
     // ── Move & clean ──
-    const scrollSpd=speed;
+    const scrollSpd=speed+(speedBoostT>0?BOOST_SPD:0);
     clouds.forEach(c=>{ c.x-=c.spd*dt; }); clouds=clouds.filter(c=>c.x>-200);
     bgElements.forEach(el=>{ el.x-=el.spd*dt; }); bgElements=bgElements.filter(el=>el.x>-150);
     birdFlocks.forEach(fl=>{ fl.x-=fl.spd*dt; }); birdFlocks=birdFlocks.filter(fl=>fl.x>-100);
     obstacles.forEach(ob=>{ ob.x-=scrollSpd*dt; if(ob.type==='windmill') ob.rot+=ob.rotSpd*dt; });
     obstacles=obstacles.filter(ob=>ob.x>-150);
+    if(spettekaka&&!spettekaka.caught){
+      spettekaka.x+=spettekaka.dir*spettekaka.spd*dt;
+      spettekaka.y+=spettekaka.vy*dt;
+      spettekaka.rot+=0.04*dt;
+      // Check catch (generous radius)
+      const dx=bird.x-spettekaka.x, dy=bird.y-spettekaka.y;
+      if(dx*dx+dy*dy<(36)**2){
+        spettekaka.caught=true;
+        speedBoostT=BOOST_DUR;
+        nearMissSound();
+        addBonus(bird.x,bird.y-35,'🍰 +fart i 5 sek!');
+        setTimeout(()=>{ spettekaka=null; },200);
+      }
+      // Off screen
+      if(spettekaka.x<-80||spettekaka.x>W()+80) spettekaka=null;
+    }
     bonusPopups.forEach(p=>{ p.y-=40*dt; p.life-=dt; });
     bonusPopups=bonusPopups.filter(p=>p.life>0);
     // Mark passed
@@ -2947,8 +3144,21 @@ function initNils(){
     bgElements.forEach(el=>{ if(el.type==='korsvirke') drawKorsvirkehus(el.x,el.y,el.scale); else if(el.type==='stuga') drawStuga(el.x,el.y,el.scale); else drawTree(el.x,el.y,el.scale); });
     drawGround();
     birdFlocks.forEach(fl=>drawBirdFlock(fl));
-    obstacles.forEach(ob=>{ if(ob.type==='windmill') drawWindmill(ob); else if(ob.type==='church') drawChurch(ob); else if(ob.type==='topflock') drawBirdFlock({x:ob.x,y:ob.y,birds:ob.birds}); else drawHouse(ob); });
-    drawGooseAndNils(bird.x,bird.y,bird.rot,recovering,recoverT,nilsOffX,nilsOffY,nilsSpin);
+    obstacles.forEach(ob=>{
+      if(ob.type==='windmill') drawWindmill(ob);
+      else if(ob.type==='church') drawChurch(ob);
+      else if(ob.type==='topflock'||ob.type==='midbird') drawBirdFlock({x:ob.x,y:ob.y,birds:ob.birds});
+      else if(ob.type==='diver'){
+        const prog=Math.max(0,Math.min(1,(W()+30-ob.x)/(W()+30)));
+        const cy=ob.startY+(ob.endY-ob.startY)*prog;
+        drawDiverBird(ob.x,cy);
+      }
+      else drawHouse(ob);
+    });
+    if(spettekaka&&!spettekaka.caught) drawSpettekaka(spettekaka);
+    const effectiveRot=speedBoostT>0?bird.rot+(Math.sin(boostFlashT*20)*0.05):bird.rot;
+    drawGooseAndNils(bird.x,bird.y,effectiveRot,recovering,recoverT,nilsOffX,nilsOffY,nilsSpin);
+    drawBoostHud();
     // Bonus popups
     bonusPopups.forEach(p=>{
       ctx.globalAlpha=Math.min(1,p.life); ctx.font='bold 15px Nunito,sans-serif'; ctx.fillStyle='#fff700';
