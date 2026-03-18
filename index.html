@@ -2483,22 +2483,24 @@ function initNils(){
   function stopWind(){ try{ if(windNode){ windNode.stop(); windNode=null; window._nlWindNode=null; } }catch(e){} }
 
   // ── Game state ──
-  let started=false, dist=0, speed=120, lastT=performance.now();
+  let started=false, dist=0, speed=150, lastT=performance.now();
 
   // Nils + Akka (the goose)
-  const bird = { x:0, y:0, vy:0, gravity:520, flapPower:-260, rot:0 };
+  const bird = { x:0, y:0, vy:0, gravity:520, flapPower:-260, rot:0, wingAnim:0 };
   // Recovery after tumble
   let recovering=false, recoverT=0, RECOVER_DUR=1.8;
   let nilsOffX=0, nilsOffY=0, nilsSpin=0; // tumble state
 
   // Score
   let score=0, bonusPopups=[];
-  let nearMissTracked=new Set(); // obstacle ids we've already given near-miss bonus
+  let nearMissTracked=new Set();
+  let feathers=[];
 
   // Spettekaka
   let spettekaka=null, spetteTimer=12+Math.random()*10;
   let speedBoostT=0, BOOST_DUR=5, BOOST_SPD=80;
   let boostFlashT=0;
+  let bonusFood=null, bonusFoodTimer=20+Math.random()*15;
 
   // Obstacles pool
   let obstacles=[], obstacleId=0;
@@ -2510,13 +2512,14 @@ function initNils(){
 
   // Birds (starlings)
   let birdFlocks=[], birdTimer=4;
+  let bridgeShown=false, torsoShown=false;
 
   // ── Spawn helpers ──
   function spawnCloud(){
     clouds.push({ x:W()+80, y:20+Math.random()*(H()*0.45), w:60+Math.random()*100, h:28+Math.random()*30, spd:18+Math.random()*14 });
   }
   function spawnBgElement(){
-    const types=['korsvirke','korsvirke','stuga','stuga','tree','tree','tree'];
+    const types=['korsvirke','korsvirke','stuga','stuga','tree','tree','tree','lake','train'];
     const t=types[Math.floor(Math.random()*types.length)];
     const ground=H()-H()*0.14;
     bgElements.push({ type:t, x:W()+60, y:ground, spd:40+Math.random()*20, scale:0.7+Math.random()*0.4 });
@@ -2533,6 +2536,59 @@ function initNils(){
     const y=H()*0.18+Math.random()*H()*0.45;
     const fromLeft=Math.random()<0.5;
     spettekaka={ x:fromLeft?-40:W()+40, y, vy:(Math.random()-0.5)*30, spd:fromLeft?90:90, dir:fromLeft?1:-1, rot:0, caught:false };
+  }
+
+  function spawnBonusFood(){
+    const types=['smorgas','knackebrod'];
+    const t=types[Math.floor(Math.random()*types.length)];
+    const y=H()*0.12+Math.random()*H()*0.55;
+    const fromLeft=Math.random()<0.5;
+    bonusFood={ type:t, x:fromLeft?-40:W()+40, y, dir:fromLeft?1:-1, spd:80, rot:0, caught:false };
+  }
+
+  function drawSmorgas(x,y,rot){
+    ctx.save(); ctx.translate(x,y); ctx.rotate(rot);
+    // Smörgåstårta — layered sandwich cake, round, colourful
+    const R=20;
+    // Bread layer bottom
+    ctx.fillStyle='#d4a855'; ctx.beginPath(); ctx.ellipse(0,4,R,6,0,0,Math.PI*2); ctx.fill();
+    // Filling layers
+    [['#f5d87a',2],['#e8f0c8',-1],['#f5d87a',-4]].forEach(([col,oy])=>{
+      ctx.fillStyle=col; ctx.beginPath(); ctx.ellipse(0,oy,R-1,4,0,0,Math.PI*2); ctx.fill();
+    });
+    // Top cream layer
+    ctx.fillStyle='#fffdf0'; ctx.beginPath(); ctx.ellipse(0,-7,R,5,0,0,Math.PI*2); ctx.fill();
+    // Decorations on top: shrimp (pink dots), lemon slice, cucumber
+    [[0,-8,'#f4a460',3],[10,-9,'#ffeb3b',2.5],[-10,-9,'#8bc34a',2.5]].forEach(([dx,dy,col,r])=>{
+      ctx.beginPath(); ctx.arc(dx,dy,r,0,Math.PI*2); ctx.fillStyle=col; ctx.fill();
+    });
+    // Outline
+    ctx.strokeStyle='#c8a040'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.ellipse(0,-7,R,5,0,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawKnackebrod(x,y,rot){
+    ctx.save(); ctx.translate(x,y); ctx.rotate(rot);
+    // Knäckebröd — dark rye crispbread, round with hole, textured
+    const R=18;
+    ctx.fillStyle='#6b3a2a';
+    ctx.beginPath(); ctx.arc(0,0,R,0,Math.PI*2); ctx.fill();
+    // Hole in middle
+    ctx.fillStyle='rgba(0,0,0,0.4)';
+    ctx.beginPath(); ctx.arc(0,0,4,0,Math.PI*2); ctx.fill();
+    // Texture dots (rye seeds)
+    ctx.fillStyle='rgba(90,50,30,0.6)';
+    for(let i=0;i<14;i++){
+      const a=i/14*Math.PI*2, r2=6+Math.random()*10;
+      ctx.beginPath(); ctx.arc(Math.cos(a)*r2,Math.sin(a)*r2,1.2,0,Math.PI*2); ctx.fill();
+    }
+    // Score lines across
+    ctx.strokeStyle='rgba(80,40,20,0.5)'; ctx.lineWidth=1;
+    for(let i=-12;i<=12;i+=6){ ctx.beginPath(); ctx.moveTo(i,-R); ctx.lineTo(i,R); ctx.stroke(); }
+    ctx.strokeStyle='#4a2518'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(0,0,R,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
   }
 
   function spawnObstacle(){
@@ -2669,21 +2725,49 @@ function initNils(){
 
   function drawSky(){
     const w=W(),h=H();
+    // After 800m transition to golden afternoon over 200m
+    const CYCLE=20000;
+    const t=(1-Math.cos(2*Math.PI*dist/CYCLE))/2; // smooth 0→1→0 loop
+    function lerp(a,b,t2){ return Math.round(a+(b-a)*t2); }
+    function lerpCol(c1,c2,t2){
+      return `rgb(${lerp(c1[0],c2[0],t2)},${lerp(c1[1],c2[1],t2)},${lerp(c1[2],c2[2],t2)})`;
+    }
+    const topDay=[91,184,245], topGold=[210,140,60];
+    const midDay=[135,206,235], midGold=[230,170,90];
+    const botDay=[200,232,176], botGold=[240,200,120];
     const grad=ctx.createLinearGradient(0,0,0,h);
-    grad.addColorStop(0,'#5bb8f5');
-    grad.addColorStop(0.55,'#87ceeb');
-    grad.addColorStop(1,'#c8e8b0');
+    grad.addColorStop(0,lerpCol(topDay,topGold,t));
+    grad.addColorStop(0.5,lerpCol(midDay,midGold,t));
+    grad.addColorStop(1,lerpCol(botDay,botGold,t));
     ctx.fillStyle=grad; ctx.fillRect(0,0,w,h);
+    // Sun — moves lower and warmer as afternoon comes
+    if(t>0.1){
+      const sunX=w*0.75, sunY=h*(0.08+t*0.12);
+      const sunGrad=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,30+t*15);
+      sunGrad.addColorStop(0,`rgba(255,220,100,${t*0.9})`);
+      sunGrad.addColorStop(0.4,`rgba(255,180,50,${t*0.6})`);
+      sunGrad.addColorStop(1,'rgba(255,120,0,0)');
+      ctx.fillStyle=sunGrad; ctx.fillRect(0,0,w,h);
+    }
   }
 
   function drawFields(){
     const w=W(),h=H(), groundY=h-h*0.14;
-    // Rapeseed stripes
-    const stripes=[{y:groundY,hh:h*0.14,col:'#8bc34a'},{y:groundY-h*0.06,hh:h*0.06,col:'#f9e04b'},{y:groundY-h*0.11,hh:h*0.055,col:'#a5d86e'},{y:groundY-h*0.17,hh:h*0.065,col:'#6ea832'}];
-    stripes.forEach(s=>{ ctx.fillStyle=s.col; ctx.fillRect(0,s.y,w,s.hh); });
+    const CYCLE=20000;
+    const t=(1-Math.cos(2*Math.PI*dist/CYCLE))/2;
+    function lc(c1,c2,t2){ return `rgb(${Math.round(c1[0]+(c2[0]-c1[0])*t2)},${Math.round(c1[1]+(c2[1]-c1[1])*t2)},${Math.round(c1[2]+(c2[2]-c1[2])*t2)})`; }
+    // Day: rapeseed yellow / green. Autumn: harvested brown / beige
+    const stripes=[
+      {y:groundY,    hh:h*0.14, day:[139,195,74],  aut:[110,80,40]},
+      {y:groundY-h*0.06, hh:h*0.06, day:[249,224,75], aut:[160,130,70]},
+      {y:groundY-h*0.11, hh:h*0.055,day:[165,216,110],aut:[130,100,55]},
+      {y:groundY-h*0.17, hh:h*0.065,day:[110,168,50], aut:[100,75,38]},
+    ];
+    stripes.forEach(s=>{ ctx.fillStyle=lc(s.day,s.aut,t); ctx.fillRect(0,s.y,w,s.hh); });
     // Horizon haze
     const haze=ctx.createLinearGradient(0,groundY-h*0.18,0,groundY-h*0.08);
-    haze.addColorStop(0,'rgba(135,206,235,0)'); haze.addColorStop(1,'rgba(180,220,160,0.35)');
+    haze.addColorStop(0,'rgba(135,206,235,0)');
+    haze.addColorStop(1,t<0.5?'rgba(180,220,160,0.35)':'rgba(220,180,100,0.3)');
     ctx.fillStyle=haze; ctx.fillRect(0,groundY-h*0.18,w,h*0.18);
   }
 
@@ -2752,6 +2836,92 @@ function initNils(){
     [[0,-55,22],[0,-42,28],[0,-28,22]].forEach(([tx,ty,r])=>{
       ctx.beginPath(); ctx.arc(tx,ty,r,0,Math.PI*2); ctx.fill();
     });
+    ctx.restore();
+  }
+
+  function drawLake(x,y,scale){
+    const w2=90*scale, h2=18*scale;
+    ctx.save(); ctx.translate(x,y);
+    // Water
+    const wg=ctx.createLinearGradient(-w2,-h2,w2,0);
+    wg.addColorStop(0,'#5ba8d0'); wg.addColorStop(0.5,'#7ec8e3'); wg.addColorStop(1,'#4a90b8');
+    ctx.fillStyle=wg;
+    ctx.beginPath(); ctx.ellipse(0,-h2*0.5,w2,h2,0,0,Math.PI*2); ctx.fill();
+    // Sky reflection shimmer
+    ctx.fillStyle='rgba(255,255,255,0.18)';
+    ctx.beginPath(); ctx.ellipse(-w2*0.25,-h2*0.6,w2*0.3,h2*0.3,0,0,Math.PI*2); ctx.fill();
+    // Shore edge
+    ctx.strokeStyle='#4a8fa0'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.ellipse(0,-h2*0.5,w2,h2,0,Math.PI,Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawTrain(x,y,scale){
+    ctx.save(); ctx.translate(x,y); ctx.scale(scale,scale);
+    const ground=0;
+    // Track lines
+    ctx.strokeStyle='#888'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(-80,ground-3); ctx.lineTo(80,ground-3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-80,ground-7); ctx.lineTo(80,ground-7); ctx.stroke();
+    // Sleepers
+    ctx.strokeStyle='#6d4c41'; ctx.lineWidth=3;
+    for(let i=-70;i<80;i+=18){ ctx.beginPath(); ctx.moveTo(i,ground-2); ctx.lineTo(i,ground-8); ctx.stroke(); }
+    // Wagons
+    [0,-55,-110].forEach((ox,wi)=>{
+      const col=wi===0?'#c0392b':'#2e4a7a';
+      ctx.fillStyle=col; ctx.fillRect(ox-26,ground-38,50,28);
+      ctx.fillStyle='rgba(255,255,255,0.15)';
+      [-18,-4,10].forEach(wx=>{ ctx.fillRect(ox+wx,ground-33,10,10); });
+      ctx.fillStyle='#222'; ctx.beginPath(); ctx.arc(ox-16,ground-2,5,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(ox+16,ground-2,5,0,Math.PI*2); ctx.fill();
+    });
+    // Smoke puff
+    ctx.fillStyle='rgba(200,200,200,0.5)';
+    ctx.beginPath(); ctx.arc(-108,ground-52,8,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-116,ground-60,6,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawBridge(x,y){
+    // Öresund bridge silhouette — cable-stayed, dramatic
+    ctx.save(); ctx.translate(x,y);
+    ctx.strokeStyle='rgba(80,100,120,0.7)'; ctx.fillStyle='rgba(80,100,120,0.6)';
+    // Bridge deck
+    ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(-200,0); ctx.lineTo(200,0); ctx.stroke();
+    // Two pylons
+    [-70,70].forEach(px=>{
+      ctx.fillRect(px-5,-120,10,120);
+      // Stay cables
+      ctx.lineWidth=1.2; ctx.strokeStyle='rgba(100,120,140,0.5)';
+      for(let c=-60;c<=60;c+=15){
+        ctx.beginPath(); ctx.moveTo(px,-(c<0?Math.abs(c)*1.5:c*1.5)-10); ctx.lineTo(px+c*1.5,0); ctx.stroke();
+      }
+    });
+    // Label
+    ctx.font='bold 11px Nunito,sans-serif'; ctx.fillStyle='rgba(255,255,255,0.5)';
+    ctx.textAlign='center'; ctx.fillText('Öresundsbron',0,-130); ctx.textAlign='left';
+    ctx.restore();
+  }
+
+  function drawTurningTorso(x,y){
+    ctx.save(); ctx.translate(x,y);
+    // Turning Torso — twisted segmented tower in Malmö
+    const segs=9, segH=16, twist=0.06;
+    for(let i=0;i<segs;i++){
+      const iy=-(i+0.5)*segH, angle=i*twist;
+      const w2=12-i*0.5;
+      ctx.save(); ctx.translate(0,iy); ctx.rotate(angle);
+      ctx.fillStyle=`rgba(200,215,230,${0.6+i*0.04})`;
+      ctx.strokeStyle='rgba(140,160,180,0.7)'; ctx.lineWidth=1;
+      ctx.fillRect(-w2,-segH/2,w2*2,segH); ctx.strokeRect(-w2,-segH/2,w2*2,segH);
+      ctx.restore();
+    }
+    // Spire
+    ctx.fillStyle='rgba(200,215,230,0.7)';
+    ctx.beginPath(); ctx.moveTo(-3,-segs*segH); ctx.lineTo(3,-segs*segH); ctx.lineTo(0,-segs*segH-20); ctx.closePath(); ctx.fill();
+    ctx.font='bold 10px Nunito,sans-serif'; ctx.fillStyle='rgba(255,255,255,0.5)';
+    ctx.textAlign='center'; ctx.fillText('Turning Torso',0,-segs*segH-30); ctx.textAlign='left';
     ctx.restore();
   }
 
@@ -2924,25 +3094,51 @@ function initNils(){
   }
 
   function drawDiverBird(x,y){
+    // Vit stork — white stork, classic Skåne nesting bird
     ctx.save(); ctx.translate(x,y);
-    // Big stork-like bird, bigger hitbox
-    ctx.fillStyle='#222';
-    ctx.beginPath(); ctx.ellipse(0,0,14,6,0,0,Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(-12,0,5,0,Math.PI*2); ctx.fill();
-    // Long beak
-    ctx.fillStyle='#e8a030';
-    ctx.beginPath(); ctx.moveTo(-16,-1); ctx.lineTo(-28,0); ctx.lineTo(-16,2); ctx.closePath(); ctx.fill();
-    // Eye
-    ctx.beginPath(); ctx.arc(-13,-1,1.5,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
-    // Wings spread
-    const flap=Math.sin(performance.now()/120)*14;
-    ctx.fillStyle='#333';
-    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-10,flap); ctx.lineTo(-20,flap*0.6); ctx.lineTo(-8,0); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-10,-flap); ctx.lineTo(-20,-flap*0.6); ctx.lineTo(-8,0); ctx.closePath(); ctx.fill();
-    // Long legs trailing
-    ctx.strokeStyle='#555'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(8,4); ctx.lineTo(16,18); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(4,4); ctx.lineTo(12,18); ctx.stroke();
+    const flap=Math.sin(performance.now()/110)*18;
+    // Wings — white with black tips
+    // Upper wing
+    ctx.save(); ctx.rotate(-0.1);
+    ctx.fillStyle='#f0ece4';
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-22,flap); ctx.lineTo(-36,flap+4); ctx.lineTo(-26,flap-6); ctx.lineTo(-8,-4); ctx.closePath(); ctx.fill();
+    // Black wingtip
+    ctx.fillStyle='#1a1a1a';
+    ctx.beginPath(); ctx.moveTo(-22,flap); ctx.lineTo(-36,flap+4); ctx.lineTo(-30,flap-5); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    // Lower wing
+    ctx.save(); ctx.rotate(0.1);
+    ctx.fillStyle='#e8e4dc';
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-22,-flap); ctx.lineTo(-36,-flap+4); ctx.lineTo(-26,-flap-6); ctx.lineTo(-8,-4); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#1a1a1a';
+    ctx.beginPath(); ctx.moveTo(-22,-flap); ctx.lineTo(-36,-flap+4); ctx.lineTo(-30,-flap-5); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    // Body — white elongated
+    ctx.fillStyle='#f5f2ec';
+    ctx.beginPath(); ctx.ellipse(0,0,16,7,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#d0ccc0'; ctx.lineWidth=1; ctx.stroke();
+    // Neck + head
+    ctx.fillStyle='#f5f2ec';
+    ctx.beginPath(); ctx.moveTo(12,-2); ctx.quadraticCurveTo(20,-8,22,-14); ctx.quadraticCurveTo(20,-18,18,-14); ctx.quadraticCurveTo(16,-10,8,-2); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(21,-15,5,0,Math.PI*2); ctx.fillStyle='#f5f2ec'; ctx.fill();
+    // Red beak — long and pointed, signature stork feature
+    ctx.strokeStyle='#c0392b'; ctx.lineWidth=3; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(25,-15); ctx.lineTo(40,-14); ctx.stroke();
+    // Eye — small dark
+    ctx.beginPath(); ctx.arc(22,-16,1.5,0,Math.PI*2); ctx.fillStyle='#111'; ctx.fill();
+    // Black eye stripe
+    ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(19,-13); ctx.lineTo(26,-13); ctx.stroke();
+    // Red legs trailing behind (storks have long red legs)
+    ctx.strokeStyle='#c0392b'; ctx.lineWidth=2.5; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(6,6); ctx.lineTo(14,22); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(2,6); ctx.lineTo(8,22); ctx.stroke();
+    // Feet
+    ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(14,22); ctx.lineTo(20,24); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(14,22); ctx.lineTo(12,26); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(8,22); ctx.lineTo(14,24); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(8,22); ctx.lineTo(6,26); ctx.stroke();
     ctx.restore();
   }
 
@@ -2994,13 +3190,35 @@ function initNils(){
 
   function drawGoose(x,y,rot,noRider){
     ctx.save(); ctx.translate(x,y); ctx.rotate(rot*0.7);
+    // Wing angle driven by wingAnim (0=rest, 1=full downstroke)
+    const wa=bird.wingAnim;
+    // Ease: sharp down, slow return
+    const wAngle = wa>0 ? -0.5-wa*0.7 : -0.3;  // negative = down
+    // Upper wing (near side)
+    ctx.save();
+    ctx.translate(-4, 2);
+    ctx.rotate(wAngle*0.5);
+    ctx.fillStyle='#d8d4c8';
+    ctx.beginPath(); ctx.ellipse(0,0,24,7,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#b8b0a0'; ctx.lineWidth=1; ctx.stroke();
+    ctx.restore();
     // Body
     ctx.fillStyle='#f5f0e8';
-    ctx.beginPath(); ctx.ellipse(0,0,26,14,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0,0,26,13,0,0,Math.PI*2); ctx.fill();
     ctx.strokeStyle='#c8c0b0'; ctx.lineWidth=1.5; ctx.stroke();
-    // Wing
-    ctx.fillStyle='#e8e4d8';
-    ctx.beginPath(); ctx.ellipse(-4,6,22,8,-0.3,0,Math.PI*2); ctx.fill();
+    // Primary wing feathers (the visible downstroke)
+    ctx.save();
+    ctx.translate(-2, 4);
+    ctx.rotate(wAngle);
+    ctx.fillStyle='#eae6da';
+    ctx.beginPath(); ctx.ellipse(0,0,22,6,0.1,0,Math.PI*2); ctx.fill();
+    // Feather tips — 5 individual primary feathers
+    for(let f=0;f<5;f++){
+      const fx=-14+f*7, fy=5+f*1.5;
+      ctx.beginPath(); ctx.ellipse(fx,fy,4,2.5,0.3+f*0.08,0,Math.PI*2);
+      ctx.fillStyle=f%2===0?'#e0dcd0':'#ccc8bc'; ctx.fill();
+    }
+    ctx.restore();
     // Neck + head
     ctx.fillStyle='#f5f0e8';
     ctx.beginPath(); ctx.moveTo(22,-2); ctx.quadraticCurveTo(34,-12,32,-20); ctx.quadraticCurveTo(30,-26,28,-22); ctx.quadraticCurveTo(30,-16,20,-6); ctx.closePath(); ctx.fill();
@@ -3009,12 +3227,13 @@ function initNils(){
     ctx.beginPath(); ctx.arc(28,-23,7,0,Math.PI*2); ctx.fillStyle='#f5f0e8'; ctx.fill(); ctx.stroke();
     // Beak
     ctx.fillStyle='#e8a030';
-    ctx.beginPath(); ctx.moveTo(34,-23); ctx.lineTo(42,-22); ctx.lineTo(34,-19); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(34,-23); ctx.lineTo(43,-22); ctx.lineTo(34,-19); ctx.closePath(); ctx.fill();
     // Eye
-    ctx.beginPath(); ctx.arc(30,-25,2,0,Math.PI*2); ctx.fillStyle='#222'; ctx.fill();
+    ctx.beginPath(); ctx.arc(30,-25,2,0,Math.PI*2); ctx.fillStyle='#111'; ctx.fill();
+    ctx.beginPath(); ctx.arc(30.6,-25.4,0.7,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
     // Tail
     ctx.fillStyle='#e0dcd0';
-    ctx.beginPath(); ctx.moveTo(-26,0); ctx.lineTo(-36,-4); ctx.lineTo(-34,4); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-26,0); ctx.lineTo(-38,-5); ctx.lineTo(-36,0); ctx.lineTo(-38,5); ctx.lineTo(-26,1); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
 
@@ -3068,13 +3287,33 @@ function initNils(){
       drawSky(); drawFields();
       clouds.forEach(c=>drawCloud(c));
       drawGround();
-      bgElements.forEach(el=>{ if(el.type==='korsvirke') drawKorsvirkehus(el.x,el.y,el.scale); else if(el.type==='stuga') drawStuga(el.x,el.y,el.scale); else drawTree(el.x,el.y,el.scale); });
+      bgElements.forEach(el=>{
+      if(el.type==='korsvirke') drawKorsvirkehus(el.x,el.y,el.scale);
+      else if(el.type==='stuga') drawStuga(el.x,el.y,el.scale);
+      else if(el.type==='lake') drawLake(el.x,el.y,el.scale);
+      else if(el.type==='train') drawTrain(el.x,el.y,el.scale);
+      else if(el.type==='bridge'){
+        drawBridge(el.x,el.y);
+        if(!el.labelShown&&el.x<W()*0.85){ el.labelShown=true; addBonus(el.x,el.y-160,'🌉 Öresundsbron!'); }
+      }
+      else if(el.type==='torso'){
+        drawTurningTorso(el.x,el.y);
+        if(!el.labelShown&&el.x<W()*0.85){ el.labelShown=true; addBonus(el.x,el.y-180,'🏙️ Turning Torso!'); }
+      }
+      else drawTree(el.x,el.y,el.scale);
+    });
       bird.x=w*0.28; bird.y=h*0.42;
       drawGooseAndNils(bird.x,bird.y,0,false,0,0,0,0);
       requestAnimationFrame(nlLoop); return;
     }
 
     // ── Physics ──
+    bird.wingAnim=Math.max(0,bird.wingAnim-dt*4);
+    // Spawn feather trail
+    if(started&&Math.random()<0.25+bird.wingAnim*0.5){
+      feathers.push({x:bird.x-20,y:bird.y+8,vx:-(30+Math.random()*20),vy:(Math.random()-0.5)*15,rot:Math.random()*Math.PI*2,rotV:(Math.random()-0.5)*3,life:1,decay:0.6+Math.random()*0.4});
+    }
+    for(let i=feathers.length-1;i>=0;i--){ const f=feathers[i]; f.x+=f.vx*dt; f.y+=f.vy*dt; f.rot+=f.rotV*dt; f.life-=f.decay*dt; if(f.life<=0) feathers.splice(i,1); }
     if(!recovering){
       bird.vy += bird.gravity*dt;
       bird.y  += bird.vy*dt;
@@ -3098,7 +3337,7 @@ function initNils(){
     }
 
     // ── Score & speed ──
-    if(!recovering){ dist+=speed*dt; score=Math.floor(dist); speed=Math.min(260,120+dist*0.025); }
+    if(!recovering){ dist+=speed*dt; score=Math.floor(dist); speed=Math.min(310,150+dist*0.03); }
     if(speedBoostT>0){ speedBoostT-=dt; boostFlashT+=dt; if(speedBoostT<=0){ speedBoostT=0; } }
     scoreEl.textContent=score+'m över Skåne';
 
@@ -3107,6 +3346,9 @@ function initNils(){
     bgTimer-=dt; if(bgTimer<=0){ spawnBgElement(); bgTimer=3+Math.random()*3; }
     birdTimer-=dt; if(birdTimer<=0){ spawnBirdFlock(); birdTimer=3+Math.random()*4; }
     spetteTimer-=dt; if(spetteTimer<=0&&!spettekaka){ spawnSpettekaka(); spetteTimer=12+Math.random()*10; }
+    bonusFoodTimer-=dt; if(bonusFoodTimer<=0&&!bonusFood){ spawnBonusFood(); bonusFoodTimer=18+Math.random()*15; }
+    if(!bridgeShown&&dist>5000){ bridgeShown=true; bgElements.push({type:'bridge',x:W()+200,y:H()-H()*0.14,spd:35,scale:1,labelShown:false}); }
+    if(!torsoShown&&dist>15000){ torsoShown=true; bgElements.push({type:'torso',x:W()+100,y:H()-H()*0.14,spd:30,scale:1,labelShown:false}); }
     spawnTimer-=dt; spawnInterval=Math.max(0.9,1.4-dist*0.001);
     if(spawnTimer<=0){ spawnObstacle(); spawnTimer=spawnInterval+Math.random()*0.6; }
 
@@ -3133,6 +3375,27 @@ function initNils(){
       // Off screen
       if(spettekaka.x<-80||spettekaka.x>W()+80) spettekaka=null;
     }
+    if(bonusFood&&!bonusFood.caught){
+      bonusFood.x+=bonusFood.dir*bonusFood.spd*dt;
+      bonusFood.rot+=0.05*dt;
+      const dx=bird.x-bonusFood.x, dy=bird.y-bonusFood.y;
+      if(dx*dx+dy*dy<(32)**2){
+        bonusFood.caught=true;
+        if(bonusFood.type==='smorgas'){
+          // Smörgåstårta: slow-mo / time dilation for 8s (reduce speed temporarily)
+          speedBoostT=0; // cancel any active boost
+          score+=100;
+          addBonus(bird.x,bird.y-35,'🎂 Smörgåstårta! +100m');
+        } else {
+          // Knäckebröd: instant +300m score
+          score+=300; dist+=300;
+          addBonus(bird.x,bird.y-35,'🫓 Knäckebröd! +300m');
+        }
+        nearMissSound();
+        setTimeout(()=>{ bonusFood=null; },200);
+      }
+      if(bonusFood&&(bonusFood.x<-80||bonusFood.x>W()+80)) bonusFood=null;
+    }
     bonusPopups.forEach(p=>{ p.y-=40*dt; p.life-=dt; });
     bonusPopups=bonusPopups.filter(p=>p.life>0);
     // Mark passed
@@ -3143,7 +3406,21 @@ function initNils(){
     ctx.clearRect(0,0,w,h);
     drawSky(); drawFields();
     clouds.forEach(c=>drawCloud(c));
-    bgElements.forEach(el=>{ if(el.type==='korsvirke') drawKorsvirkehus(el.x,el.y,el.scale); else if(el.type==='stuga') drawStuga(el.x,el.y,el.scale); else drawTree(el.x,el.y,el.scale); });
+    bgElements.forEach(el=>{
+      if(el.type==='korsvirke') drawKorsvirkehus(el.x,el.y,el.scale);
+      else if(el.type==='stuga') drawStuga(el.x,el.y,el.scale);
+      else if(el.type==='lake') drawLake(el.x,el.y,el.scale);
+      else if(el.type==='train') drawTrain(el.x,el.y,el.scale);
+      else if(el.type==='bridge'){
+        drawBridge(el.x,el.y);
+        if(!el.labelShown&&el.x<W()*0.85){ el.labelShown=true; addBonus(el.x,el.y-160,'🌉 Öresundsbron!'); }
+      }
+      else if(el.type==='torso'){
+        drawTurningTorso(el.x,el.y);
+        if(!el.labelShown&&el.x<W()*0.85){ el.labelShown=true; addBonus(el.x,el.y-180,'🏙️ Turning Torso!'); }
+      }
+      else drawTree(el.x,el.y,el.scale);
+    });
     drawGround();
     birdFlocks.forEach(fl=>drawBirdFlock(fl));
     obstacles.forEach(ob=>{
@@ -3157,6 +3434,8 @@ function initNils(){
       }
       else drawHouse(ob);
     });
+    if(bonusFood&&!bonusFood.caught){ if(bonusFood.type==='smorgas') drawSmorgas(bonusFood.x,bonusFood.y,bonusFood.rot); else drawKnackebrod(bonusFood.x,bonusFood.y,bonusFood.rot); }
+    feathers.forEach(f=>{ ctx.save(); ctx.translate(f.x,f.y); ctx.rotate(f.rot); ctx.globalAlpha=f.life*0.7; ctx.fillStyle='#f0ece0'; ctx.beginPath(); ctx.ellipse(0,0,4,1.5,0,0,Math.PI*2); ctx.fill(); ctx.restore(); ctx.globalAlpha=1; });
     if(spettekaka&&!spettekaka.caught) drawSpettekaka(spettekaka);
     const effectiveRot=speedBoostT>0?bird.rot+(Math.sin(boostFlashT*20)*0.05):bird.rot;
     drawGooseAndNils(bird.x,bird.y,effectiveRot,recovering,recoverT,nilsOffX,nilsOffY,nilsSpin);
@@ -3181,6 +3460,7 @@ function initNils(){
       startWind();
     }
     bird.vy=bird.flapPower;
+    bird.wingAnim=1.0;
     honkSound();
   }
 
