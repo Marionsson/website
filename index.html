@@ -159,8 +159,8 @@ body {
 .tag-pop     { background:#d8eef5; color:#2a7a9e; }
 .tag-relax   { background:#e8f5d8; color:#3a7a3a; }
 .tag-nils    { background:#d0edff; color:#1a5a8e; }
-    #nils-wrap { position:relative; width:100%; height:100%; background:#5bb8f5; overflow:hidden; cursor:pointer; }
-    #nils-canvas { display:block; width:100%; height:100%; }
+    #nils-wrap { position:relative; width:100%; height:100%; background:#5bb8f5; overflow:hidden; cursor:pointer; -webkit-tap-highlight-color:transparent; user-select:none; }
+    #nils-canvas { display:block; width:100%; height:100%; touch-action:none; -webkit-tap-highlight-color:transparent; }
     #nils-score { position:absolute; top:12px; right:16px; font-family:'Nunito',sans-serif; font-size:1em; font-weight:700; color:rgba(255,255,255,0.92); text-shadow:0 1px 4px rgba(0,0,0,0.25); pointer-events:none; }
     #nils-hint  { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); font-family:'Nunito',sans-serif; font-size:0.95em; color:rgba(255,255,255,0.88); text-shadow:0 1px 3px rgba(0,0,0,0.2); pointer-events:none; transition:opacity 1s; }
 .tag-pizza   { background:#fef3e2; color:#b8620a; }
